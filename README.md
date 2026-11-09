@@ -28,7 +28,7 @@ Works entirely in-game. If you like keeping notes outside the game, **optional**
 
 ## Install
 
-Install from CurseForge, or download `SpicySideQuests-vX.Y.Z.zip` from [Releases](https://github.com/zednx/spicy-side-quests/releases). Extract it into `World of Warcraft/_forever_/Interface/AddOns/`, then restart the game.
+Install from [CurseForge](https://www.curseforge.com/wow/addons/spicy-side-quest), or download `SpicySideQuests-vX.Y.Z.zip` from [Releases](https://github.com/zednx/spicy-side-quests/releases). Extract it into `World of Warcraft/_forever_/Interface/AddOns/`, then restart the game.
 
 ## Commands
 
