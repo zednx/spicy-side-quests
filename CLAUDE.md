@@ -39,6 +39,8 @@ There are two version tracks:
 
 The bump script updates every version string and adds a CHANGELOG section with a `TODO` placeholder. Fill it in before tagging. `scripts/check-release.sh` (run by both workflows) refuses a release whose version isn't higher than the last one, or whose CHANGELOG section is missing or still says TODO.
 
+Code signing (SignPath) for `SpicySideQuests.ps1` is wired into `release.yml` and switches on with the `SIGNPATH_*` secret and variables; see `docs/signing.md`. A signed release needs the user to approve the request in SignPath.
+
 Claude sessions can't push tags. Ask the user to run `git tag … && git push origin …`.
 
 ## Rules that matter

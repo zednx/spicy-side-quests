@@ -196,7 +196,20 @@ Signed scripts are on the way.
 
 ## Security
 
-The addon has no network access and only touches its own data. The optional scripts never connect to the internet and only touch the files listed in [SECURITY.md](SECURITY.md).
+The addon has no network access and only touches its own data. The optional scripts and Obsidian plugin never connect to the internet, and only touch the files listed in [SECURITY.md](SECURITY.md).
+
+**Code signing policy:** see [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md). The Windows PowerShell script is set to be signed through the SignPath Foundation (application pending; releases aren't signed yet).
+
+<details>
+<summary><b>Uninstalling</b></summary>
+
+- **Addon:** delete `Interface/AddOns/SpicySideQuests`. Optionally also delete `WTF/Account/<account>/SavedVariables/SpicySideQuests.lua`.
+- **Sync script:** delete the folder you extracted, and the settings folder: `%APPDATA%\SpicySideQuests` (Windows) or `~/.config/spicysidequests`.
+- **Obsidian plugin:** disable and uninstall it under Settings → Community plugins.
+
+Nothing is installed system-wide. Your markdown note is never deleted.
+
+</details>
 
 ## Contributing
 

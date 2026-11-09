@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath artifact configuration for the release workflow's "unsigned-powershell" artifact.
+  Paste this into the SignPath project (Artifact configurations -> default). GitHub delivers
+  the uploaded artifact as a zip, so the root element is <zip-file>.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <powershell-file path="SpicySideQuests.ps1">
+      <authenticode-sign />
+    </powershell-file>
+  </zip-file>
+</artifact-configuration>

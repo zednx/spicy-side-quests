@@ -19,6 +19,7 @@ permissions:
   contents: write
   id-token: write
   attestations: write
+  actions: read # SignPath reads the uploaded artifact
 
 jobs:
   release:
@@ -46,7 +47,7 @@ jobs:
           for f in SpicySideQuests/*.lua; do luac5.1 -p "$f"; done
           lua5.1 tests/run.lua
 
-      - name: Build zips
+      - name: Build the addon zip and stage the companion files
         env:
           v: ${{ steps.v.outputs.version }}
         run: |
@@ -57,9 +58,61 @@ jobs:
                 companion/start.cmd companion/start.sh companion/start-powershell.cmd \
                 companion/setup.cmd companion/setup.sh companion/setup-powershell.cmd README.md LICENSE CHANGELOG.md "$c/"
           rm -f "$c/powershell/test.ps1"
+          unzip -l "dist/SpicySideQuests-v$v.zip"
+
+      # --- Code signing (SignPath Foundation) --------------------------------------
+      # Signs the PowerShell script so Windows Smart App Control trusts it. Runs only on
+      # release tags, once SignPath is set up (see docs/signing.md); every signing
+      # request waits for a manual approval in SignPath. Until then these steps skip.
+      - name: Check whether code signing is set up
+        id: signing
+        env:
+          HAS_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+          ORG: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$HAS_TOKEN" = true ] && [ -n "$ORG" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"; echo "Code signing: on"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"; echo "Code signing: not set up, shipping unsigned scripts"
+          fi
+
+      - name: Upload the script for signing
+        id: unsigned
+        if: steps.signing.outputs.enabled == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: unsigned-powershell
+          path: stage/SpicySideQuests-Companion/powershell/SpicySideQuests.ps1
+          if-no-files-found: error
+
+      - name: Sign with SignPath (waits for approval)
+        if: steps.signing.outputs.enabled == 'true'
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'spicy-side-quests' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 86400 # approve within a day
+          output-artifact-directory: signed
+
+      - name: Use the signed script
+        if: steps.signing.outputs.enabled == 'true'
+        run: |
+          f=signed/SpicySideQuests.ps1
+          grep -q "# SIG # Begin signature block" "$f" || { echo "::error::$f has no Authenticode signature"; exit 1; }
+          cp "$f" stage/SpicySideQuests-Companion/powershell/SpicySideQuests.ps1
+          echo "Signed SpicySideQuests.ps1 is in the companion zip"
+      # -------------------------------------------------------------------------------
+
+      - name: Zip the companion
+        env:
+          v: ${{ steps.v.outputs.version }}
+        run: |
           (cd stage && zip -rq "../dist/SpicySideQuests-Companion-v$v.zip" SpicySideQuests-Companion)
           (cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
-          unzip -l "dist/SpicySideQuests-v$v.zip"
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2

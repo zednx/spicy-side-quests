@@ -28,6 +28,10 @@ They make no network connections, run no other programs and never execute anythi
 - The scripts skip a sync rather than delete everything if your markdown file goes missing or is emptied.
 - Release zips are built by GitHub Actions with build attestations. Verify one with `gh attestation verify <zip> --repo zednx/spicy-side-quests`.
 
+## Code signing
+
+See [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md).
+
 ## Reporting a problem
 
 Please use GitHub's **Report a vulnerability** button (Security tab), or open an issue if it isn't sensitive.
