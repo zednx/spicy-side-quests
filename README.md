@@ -1,6 +1,6 @@
-# WoW Todo Sync
+# Spicy Side Quests
 
-A lightweight todo list addon for **WoW Forever**, with categories, tags and map waypoints.
+Your own **side quests** for WoW Forever: a lightweight todo list addon with categories, tags and map waypoints.
 
 It works entirely in-game out of the box. An **optional** companion script syncs the list with a markdown file, such as an Obsidian note, so you can add todos when you're not playing.
 
@@ -15,23 +15,23 @@ It works entirely in-game out of the box. An **optional** companion script syncs
 ## Install
 
 1. Download the repo (or a release zip).
-2. Copy the `WoWTodoSync` folder into `World of Warcraft/_forever_/Interface/AddOns/`.
-   - The path should end in `.../AddOns/WoWTodoSync/WoWTodoSync.toc`, not one folder deeper.
+2. Copy the `SpicySideQuests` folder into `World of Warcraft/_forever_/Interface/AddOns/`.
+   - The path should end in `.../AddOns/SpicySideQuests/SpicySideQuests.toc`, not one folder deeper.
 3. Restart the game client (a `/reload` is not enough for a new addon).
 
 ## Usage
 
 | Action | How |
 |---|---|
-| Show/hide window | `/todo` or the AddOn compartment button |
-| Add | Type in the bottom box and press Enter, or `/todo add <text>` |
+| Show/hide window | `/spicy` or `/ssq`, or the AddOn compartment button |
+| Add | Type in the bottom box and press Enter, or `/ssq add <text>` |
 | Choose category | Bottom-left box; **Tab** cycles existing categories; right-click a header to add to it |
 | Complete | Click the item or its checkbox |
 | Edit | Right-click the item (press Enter to save, Esc to cancel) |
 | Delete | Hover the item and click the red **X** |
 | Waypoint | Click the map icon on the item |
-| Settings | Gear icon or `/todo config` |
-| Reset position | `/todo reset` |
+| Settings | Gear icon or `/ssq config` |
+| Reset position | `/ssq reset` |
 
 ### Input syntax
 
@@ -54,7 +54,7 @@ The `companion/` folder has a small script that keeps a markdown file (e.g. an O
 
 | Version | Needs | File |
 |---|---|---|
-| **PowerShell** | Nothing on Windows 10/11 (built in) | `companion/powershell/WoWTodoSync.ps1` |
+| **PowerShell** | Nothing on Windows 10/11 (built in) | `companion/powershell/SpicySideQuests.ps1` |
 | **Node** | [Node.js](https://nodejs.org) 22.18+; good for Linux/macOS | `companion/src/` (TypeScript, no dependencies) |
 
 Both are plain source code, so you can read every line before running them.
@@ -65,8 +65,8 @@ WoW addons can't read files or use the network, so the script works through two 
 
 | Direction | File |
 |---|---|
-| Markdown → game | Writes `Interface/AddOns/WoWTodoSync/Inbox.lua`. The game loads it but never overwrites it. |
-| Game → markdown | Reads `WTF/Account/<ACCOUNT>/SavedVariables/WoWTodoSync.lua`. The game writes it on `/reload` and logout. |
+| Markdown → game | Writes `Interface/AddOns/SpicySideQuests/Inbox.lua`. The game loads it but never overwrites it. |
+| Game → markdown | Reads `WTF/Account/<ACCOUNT>/SavedVariables/SpicySideQuests.lua`. The game writes it on `/reload` and logout. |
 
 So changes go both ways **every time you `/reload`** (or log out). If the same todo changes on both sides, the newest change wins.
 
@@ -76,12 +76,12 @@ So changes go both ways **every time you `/reload`** (or log out). If the same t
 2. Start a script:
    - **Windows, no install:** double-click `companion/start-powershell.cmd`
    - **Windows with Node:** double-click `companion/start.cmd`
-   - **Linux/macOS:** `./companion/start.sh` (Node), or `pwsh companion/powershell/WoWTodoSync.ps1`
+   - **Linux/macOS:** `./companion/start.sh` (Node), or `pwsh companion/powershell/SpicySideQuests.ps1`
 3. The first time, it asks for your markdown file and WoW folder (e.g. `C:\Program Files (x86)\World of Warcraft\_forever_`).
 
 > The PowerShell launcher uses `-ExecutionPolicy Bypass` for this one script only, because Windows blocks downloaded scripts by default. It doesn't change any system settings.
 
-Settings are saved to `%APPDATA%\WoWTodoSync\config.json` on Windows, or `~/.config/wowtodosync/config.json` elsewhere.
+Settings are saved to `%APPDATA%\SpicySideQuests\config.json` on Windows, or `~/.config/spicysidequests/config.json` elsewhere.
 
 | Node flag | PowerShell flag | What it does |
 |---|---|---|

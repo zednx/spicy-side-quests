@@ -1,11 +1,11 @@
 ## Interface: 16001
-## Title: WoW Todo Sync
-## Notes: In-game todo list with categories, tags and waypoints. Optional sync with a markdown file (e.g. Obsidian).
+## Title: Spicy Side Quests
+## Notes: Your own side quests: a todo list with categories, tags and waypoints. Optional sync with a markdown file (e.g. Obsidian).
 ## Author: zednx
 ## Version: 0.1.0
-## SavedVariables: WoWTodoSyncDB
+## SavedVariables: SpicySideQuestsDB
 ## IconTexture: Interface\Icons\INV_Misc_Note_01
-## AddonCompartmentFunc: WoWTodoSync_OnCompartmentClick
+## AddonCompartmentFunc: SpicySideQuests_OnCompartmentClick
 
 # Inbox.lua is rewritten by the optional companion app. It must exist at
 # client start-up so later changes are picked up on /reload.

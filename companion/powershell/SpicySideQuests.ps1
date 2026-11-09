@@ -1,7 +1,7 @@
 <#
-  WoW Todo Sync companion — PowerShell edition.
+  Spicy Side Quests companion — PowerShell edition.
 
-  Keeps a markdown todo file (e.g. an Obsidian note) and the WoW Todo Sync
+  Keeps a markdown todo file (e.g. an Obsidian note) and the Spicy Side Quests
   addon in sync. Needs nothing installed: works with the Windows PowerShell 5.1
   that ships with Windows 10/11, and with PowerShell 7 on any OS.
 
@@ -9,7 +9,7 @@
   can switch between them.
 
   Usage:
-    powershell -ExecutionPolicy Bypass -File WoWTodoSync.ps1 [-Once] [-Setup] [-DryRun] [-Force] [-Config <file>]
+    powershell -ExecutionPolicy Bypass -File SpicySideQuests.ps1 [-Once] [-Setup] [-DryRun] [-Force] [-Config <file>]
   Or double-click start-powershell.cmd in the companion folder.
 #>
 [CmdletBinding()]
@@ -26,7 +26,7 @@ Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
 $script:VERSION = '0.1.0'
-$script:ADDON = 'WoWTodoSync'
+$script:ADDON = 'SpicySideQuests'
 $script:DEFAULT_CATEGORY = 'General'
 $script:Inv = [Globalization.CultureInfo]::InvariantCulture
 $script:Rng = New-Object System.Random
@@ -505,7 +505,16 @@ function Join-Paths { [IO.Path]::Combine([string[]]$args) }
 function Get-DefaultConfigDir {
   if ($env:APPDATA) { return (Join-Paths $env:APPDATA $script:ADDON) }
   $xdg = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Paths $HOME '.config' }
-  Join-Paths $xdg 'wowtodosync'
+  Join-Paths $xdg 'spicysidequests'
+}
+
+# Copies settings from the old "WoW Todo Sync" name, once.
+function Move-OldConfigDir([string]$newDir) {
+  if (Test-Path -LiteralPath $newDir) { return $false }
+  $old = if ($env:APPDATA) { Join-Paths $env:APPDATA 'WoWTodoSync' } else { Join-Paths $(if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Paths $HOME '.config' }) 'wowtodosync' }
+  if (-not (Test-Path -LiteralPath $old)) { return $false }
+  Copy-Item -LiteralPath $old -Destination $newDir -Recurse
+  $true
 }
 
 function Get-CleanPath([string]$p) {
@@ -562,7 +571,7 @@ function Find-WowPaths {
 }
 
 function Invoke-Setup([string]$file, $existing) {
-  Write-Host "`nWoW Todo Sync setup - settings are saved to $file`n"
+  Write-Host "`nSpicy Side Quests setup - settings are saved to $file`n"
   $ask = { param($q, $def) $a = (Read-Host $(if ($def) { "$q`n  [$def]" } else { $q })).Trim(); if ($a) { $a } else { $def } }
   $todo = ''
   while (-not $todo) {
@@ -601,7 +610,7 @@ function Read-GameData([string]$svFile) {
   $res = @{ items = (New-Map); order = @(); categories = @() }
   if (-not $svFile -or -not (Test-Path -LiteralPath $svFile)) { return $res }
   $all = Read-LuaAssignments ([IO.File]::ReadAllText($svFile))
-  $db = Get-Key $all 'WoWTodoSyncDB'
+  $db = Get-Key $all 'SpicySideQuestsDB'
   if ($db -isnot [Collections.IDictionary]) { return $res }
   $items = Get-Key $db 'items'
   if ($items -is [Collections.IDictionary]) {
@@ -646,13 +655,13 @@ function Get-Sha1([string]$s) {
 
 function Format-Inbox($items, $categories, [double]$generated, [string]$hash) {
   $payload = [ordered]@{ generated = $generated; categories = @($categories); items = @($items | ForEach-Object { ConvertTo-ItemOutput $_ }) }
-  "-- Written by the WoW Todo Sync companion app. Changes here are overwritten.`n" +
+  "-- Written by the Spicy Side Quests companion app. Changes here are overwritten.`n" +
   "-- Without the companion app this file stays empty and the addon works in-game only.`n" +
   "-- hash: $hash`n" +
-  "WoWTodoSync_Inbox = $(ConvertTo-Lua $payload)`n"
+  "SpicySideQuests_Inbox = $(ConvertTo-Lua $payload)`n"
 }
 
-$script:NEW_FILE = "---`ntags: [wow, todo]`n---`n`n# WoW Todo`n`nSynced with the WoW Todo Sync addon. Use ``## Headings`` for categories.`n`n## $($script:DEFAULT_CATEGORY)`n"
+$script:NEW_FILE = "---`ntags: [wow, todo]`n---`n`n# WoW Todo`n`nSynced with the Spicy Side Quests addon. Use ``## Headings`` for categories.`n`n## $($script:DEFAULT_CATEGORY)`n"
 
 # One sync pass. Returns the new state, or $null when it skipped for safety.
 function Invoke-SyncOnce($cfg, $state, [switch]$DryRun, [switch]$Force, [scriptblock]$Log, [scriptblock]$Warn) {
@@ -712,13 +721,14 @@ if ($Library) { return }
 $logFn = { param($m) Write-Host "$(Get-Date -Format 'HH:mm:ss') " -ForegroundColor DarkGray -NoNewline; Write-Host $m }
 $warnFn = { param($m) Write-Host "$(Get-Date -Format 'HH:mm:ss') " -ForegroundColor DarkGray -NoNewline; Write-Host $m -ForegroundColor Yellow }
 
+if (-not $Config -and (Move-OldConfigDir (Get-DefaultConfigDir))) { & $logFn "Copied your settings from the old WoW Todo Sync folder to $(Get-DefaultConfigDir)" }
 $configFile = if ($Config) { Get-CleanPath $Config } else { Join-Paths (Get-DefaultConfigDir) 'config.json' }
 $stateFile = Join-Paths (Split-Path -Parent $configFile) 'state.json'
 
 $cfg = Read-Config $configFile
 if ($null -eq $cfg -or $Setup -or -not $cfg.todoFile -or -not $cfg.wowPath) { $cfg = Invoke-Setup $configFile $cfg }
 
-Write-Host "WoW Todo Sync v$($script:VERSION) (PowerShell)$(if ($DryRun) { '  (dry run)' })"
+Write-Host "Spicy Side Quests v$($script:VERSION) (PowerShell)$(if ($DryRun) { '  (dry run)' })"
 Write-Host "  markdown: $($cfg.todoFile)"
 Write-Host "  game:     $($cfg.wowPath)"
 if (-not (Test-AddonInstalled $cfg.wowPath)) { & $warnFn "The addon isn't installed in that WoW folder yet." }

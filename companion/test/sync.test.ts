@@ -17,7 +17,7 @@ const item = (over: Partial<Item>): Item => ({ id: "a", text: "x", tags: [], cat
 // --- Lua -------------------------------------------------------------------
 test("parses a WoW SavedVariables file", () => {
   const src = `
-WoWTodoSyncDB = {
+SpicySideQuestsDB = {
 ["items"] = {
 ["abc123"] = {
 ["text"] = "Farm \\"Arcanite\\"\\nnow",
@@ -37,10 +37,10 @@ WoWTodoSyncDB = {
 Other = nil
 `;
   const v = parseAssignments(src) as any;
-  assert.equal(v.WoWTodoSyncDB.items.abc123.text, 'Farm "Arcanite"\nnow');
-  assert.equal(v.WoWTodoSyncDB.items.abc123.done, true);
-  assert.deepEqual(v.WoWTodoSyncDB.items.abc123.tags, ["farming", "alchemy"]);
-  assert.deepEqual(v.WoWTodoSyncDB.order, ["abc123"]);
+  assert.equal(v.SpicySideQuestsDB.items.abc123.text, 'Farm "Arcanite"\nnow');
+  assert.equal(v.SpicySideQuestsDB.items.abc123.done, true);
+  assert.deepEqual(v.SpicySideQuestsDB.items.abc123.tags, ["farming", "alchemy"]);
+  assert.deepEqual(v.SpicySideQuestsDB.order, ["abc123"]);
   assert.equal(v.Other, null);
 });
 
@@ -162,15 +162,15 @@ test("first sync with identical items on both sides changes nothing", () => {
 test("full sync against a fake WoW folder", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wts-"));
   const wow = path.join(dir, "_forever_");
-  const addon = path.join(wow, "Interface", "AddOns", "WoWTodoSync");
+  const addon = path.join(wow, "Interface", "AddOns", "SpicySideQuests");
   const svDir = path.join(wow, "WTF", "Account", "ME", "SavedVariables");
   fs.mkdirSync(addon, { recursive: true });
   fs.mkdirSync(svDir, { recursive: true });
-  fs.writeFileSync(path.join(addon, "WoWTodoSync.toc"), "");
+  fs.writeFileSync(path.join(addon, "SpicySideQuests.toc"), "");
   const t = now();
   fs.writeFileSync(
-    path.join(svDir, "WoWTodoSync.lua"),
-    `WoWTodoSyncDB = { ["items"] = { ["g1"] = { ["id"] = "g1", ["text"] = "From game", ["category"] = "Quests", ["tags"] = { "q" }, ["done"] = false, ["created"] = ${t}, ["updated"] = ${t} } }, ["order"] = { "g1" }, ["categories"] = { "General", "Quests" } }`,
+    path.join(svDir, "SpicySideQuests.lua"),
+    `SpicySideQuestsDB = { ["items"] = { ["g1"] = { ["id"] = "g1", ["text"] = "From game", ["category"] = "Quests", ["tags"] = { "q" }, ["done"] = false, ["created"] = ${t}, ["updated"] = ${t} } }, ["order"] = { "g1" }, ["categories"] = { "General", "Quests" } }`,
   );
   const todo = path.join(dir, "vault", "Todo.md");
   const cfg: Config = { todoFile: todo, wowPath: wow, account: "auto", pollSeconds: 2 };
@@ -185,7 +185,7 @@ test("full sync against a fake WoW folder", () => {
   // add a todo in markdown -> appears in Inbox.lua
   fs.writeFileSync(todo, written.replace("## Quests", "## Quests\n- [ ] Added in Obsidian #md"));
   state = syncOnce(cfg, state, opts)!;
-  const inbox = parseAssignments(fs.readFileSync(path.join(addon, "Inbox.lua"), "utf8")).WoWTodoSync_Inbox as any;
+  const inbox = parseAssignments(fs.readFileSync(path.join(addon, "Inbox.lua"), "utf8")).SpicySideQuests_Inbox as any;
   const texts = inbox.items.map((i: any) => i.text);
   assert.deepEqual(texts.sort(), ["Added in Obsidian", "From game"]);
   assert.match(fs.readFileSync(todo, "utf8"), /Added in Obsidian #md \^\w+/);

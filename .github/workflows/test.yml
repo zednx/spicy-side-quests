@@ -6,7 +6,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y lua5.1
-      - run: for f in WoWTodoSync/*.lua; do luac5.1 -p "$f"; done
+      - run: for f in SpicySideQuests/*.lua; do luac5.1 -p "$f"; done
       - run: lua5.1 tests/run.lua
   companion:
     runs-on: ubuntu-latest

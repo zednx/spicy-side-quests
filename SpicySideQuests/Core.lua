@@ -1,4 +1,4 @@
--- WoW Todo Sync: data model, persistence and slash commands.
+-- Spicy Side Quests: data model, persistence and slash commands.
 -- Works fully standalone; the companion app only feeds Inbox.lua.
 local ADDON, ns = ...
 ns.VERSION = "0.1.0"
@@ -43,7 +43,7 @@ end
 ns.trim = trim
 
 function ns.Print(msg)
-	print("|cff66bbffTodo:|r " .. tostring(msg))
+	print("|cffff7a3dSpicy Side Quests:|r " .. tostring(msg))
 end
 
 ---------------------------------------------------------------------------
@@ -358,11 +358,11 @@ events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_LOGIN")
 events:SetScript("OnEvent", function(_, event, arg1)
 	if event == "ADDON_LOADED" and arg1 == ADDON then
-		WoWTodoSyncDB = ns:InitDB(WoWTodoSyncDB)
+		SpicySideQuestsDB = ns:InitDB(SpicySideQuestsDB)
 		ns:PurgeTombstones()
 	elseif event == "PLAYER_LOGIN" then
 		-- Map data is ready by now, so zone names can be resolved.
-		local merged = ns:MergeInbox(WoWTodoSync_Inbox)
+		local merged = ns:MergeInbox(SpicySideQuests_Inbox)
 		if merged > 0 then ns.Print(merged .. " item(s) synced from markdown.") end
 		if ns.CreateUI then ns:CreateUI() end
 	end
@@ -372,15 +372,15 @@ end)
 -- Slash commands
 ---------------------------------------------------------------------------
 local HELP = {
-	"/todo - show/hide the window",
-	"/todo add <text> [#tag] [@here | @Zone x, y] - add to your last category",
-	"/todo config - settings",
-	"/todo reset - reset window position",
+	"/spicy or /ssq - show/hide the window",
+	"/ssq add <text> [#tag] [@here | @Zone x, y] - add a side quest to your last category",
+	"/ssq config - settings",
+	"/ssq reset - reset window position",
 }
 
-SLASH_WOWTODOSYNC1 = "/todo"
-SLASH_WOWTODOSYNC2 = "/todosync"
-SlashCmdList.WOWTODOSYNC = function(msg)
+SLASH_SPICYSIDEQUESTS1 = "/spicy"
+SLASH_SPICYSIDEQUESTS2 = "/ssq"
+SlashCmdList.SPICYSIDEQUESTS = function(msg)
 	msg = trim(msg or "")
 	local cmd, rest = msg:match("^(%S+)%s*(.*)$")
 	cmd = cmd and cmd:lower() or ""
@@ -389,7 +389,7 @@ SlashCmdList.WOWTODOSYNC = function(msg)
 	elseif cmd == "add" then
 		local item = ns:AddItem(rest, ns.db.settings.lastCategory)
 		if item then
-			ns.Print("Added to " .. item.category .. ": " .. item.text)
+			ns.Print("New side quest in " .. item.category .. ": " .. item.text)
 		end
 	elseif cmd == "config" or cmd == "settings" or cmd == "options" then
 		ns:ToggleSettings()
@@ -400,6 +400,6 @@ SlashCmdList.WOWTODOSYNC = function(msg)
 	end
 end
 
-function WoWTodoSync_OnCompartmentClick()
+function SpicySideQuests_OnCompartmentClick()
 	ns:ToggleUI()
 end

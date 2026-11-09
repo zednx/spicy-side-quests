@@ -1,7 +1,7 @@
 {
-  "name": "wowtodosync",
+  "name": "spicysidequests",
   "version": "0.1.0",
-  "description": "Optional companion for the WoW Todo Sync addon: syncs a markdown todo file with the game.",
+  "description": "Optional companion for the Spicy Side Quests addon: syncs a markdown todo file with the game.",
   "license": "MIT",
   "type": "module",
   "engines": { "node": ">=22.18" },
@@ -14,6 +14,6 @@
     "once": "node src/index.ts --once",
     "test": "node --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "build:exe": "bun build src/index.ts --compile --target=bun-windows-x64 --outfile dist/wowtodosync.exe"
+    "build:exe": "bun build src/index.ts --compile --target=bun-windows-x64 --outfile dist/spicysidequests.exe"
   }
 }
