@@ -1,4 +1,4 @@
-<img src="docs/chilli.png" width="96" align="right" alt="">
+<img src="docs/logo.png" width="128" align="right" alt="Spicy Side Quests logo">
 
 # Spicy Side Quests
 
@@ -117,6 +117,8 @@ cd companion && npm test      # companion tests (node:test, no install needed)
 pwsh powershell/test.ps1      # PowerShell edition tests (also run on Windows PowerShell 5.1 in CI)
 npm install && npm run typecheck
 npm run build:exe             # optional single-file Windows exe (needs Bun)
+python3 tools/make_art.py     # regenerate the icon and logo (needs Pillow)
+scripts/check-version.sh 0.1.0  # check all version strings match before tagging
 ```
 
 ## License

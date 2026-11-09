@@ -11,9 +11,10 @@ Everything to fill in when creating the project at <https://authors.curseforge.c
 | Primary category | Quests & Leveling |
 | Other categories | Map & Minimap, Miscellaneous |
 | License | MIT |
-| Source | GitHub: `https://github.com/zednx/wow-todo-sync` |
-| Issues | `https://github.com/zednx/wow-todo-sync/issues` |
-| Logo / avatar | `docs/chilli.png` (256×256) |
+| Source | GitHub: `https://github.com/zednx/spicy-side-quests` |
+| Issues | `https://github.com/zednx/spicy-side-quests/issues` |
+| Logo / avatar | `docs/logo.png` (1024×1024), or `docs/logo-400.png` if the uploader wants a smaller file |
+| File to upload | `SpicySideQuests-v0.1.0.zip` from the GitHub Release |
 | Game version for the file | WoW Forever |
 | Release type | Release (or Beta for a soft launch) |
 

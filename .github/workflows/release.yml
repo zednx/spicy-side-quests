@@ -1,0 +1,84 @@
+name: release
+
+# Push a tag like v0.1.0 to publish a GitHub Release with:
+#   SpicySideQuests-vX.Y.Z.zip            the addon (upload this one to CurseForge)
+#   SpicySideQuests-Companion-vX.Y.Z.zip  the optional sync scripts
+#   SHA256SUMS.txt
+# Every zip also gets a GitHub build attestation, so anyone can check it was
+# built here from this repo's source: gh attestation verify <zip> --repo zednx/spicy-side-quests
+#
+# Run it manually (Actions -> release -> Run workflow) for a dry run: same
+# checks and zips, uploaded as a workflow artifact, nothing published.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out the version and check every file agrees
+        id: v
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then v="${GITHUB_REF_NAME#v}"
+          else v=$(sed -n 's/^## Version: *//p' SpicySideQuests/SpicySideQuests.toc | tr -d '\r'); fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          scripts/check-version.sh "$v"
+
+      - name: Addon tests
+        run: |
+          sudo apt-get update && sudo apt-get install -y lua5.1
+          for f in SpicySideQuests/*.lua; do luac5.1 -p "$f"; done
+          lua5.1 tests/run.lua
+
+      - name: Build zips
+        run: |
+          v=${{ steps.v.outputs.version }}
+          mkdir -p dist stage/SpicySideQuests-Companion
+          zip -rq "dist/SpicySideQuests-v$v.zip" SpicySideQuests
+          c=stage/SpicySideQuests-Companion
+          cp -r companion/src companion/powershell companion/package.json companion/tsconfig.json \
+                companion/start.cmd companion/start.sh companion/start-powershell.cmd README.md LICENSE CHANGELOG.md "$c/"
+          rm -f "$c/powershell/test.ps1"
+          (cd stage && zip -rq "../dist/SpicySideQuests-Companion-v$v.zip" SpicySideQuests-Companion)
+          (cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          unzip -l "dist/SpicySideQuests-v$v.zip"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*.zip
+
+      - name: Release notes
+        run: |
+          awk -v want="## v${{ steps.v.outputs.version }}" '$0==want{f=1;next} /^## v/{f=0} f' CHANGELOG.md > notes.md
+          cat >> notes.md <<'EOF'
+
+          ---
+          **Install:** download `SpicySideQuests-v*.zip`, extract it into `World of Warcraft/_forever_/Interface/AddOns/`, then restart the game.
+          **Optional sync:** download the Companion zip and see the [README](https://github.com/zednx/spicy-side-quests#markdown-sync-optional).
+
+          These zips were built by GitHub Actions from this tag's source. To check: `gh attestation verify <zip> --repo zednx/spicy-side-quests`
+          EOF
+          cat notes.md
+
+      - name: Publish GitHub Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "Spicy Side Quests $GITHUB_REF_NAME" --notes-file notes.md
+
+      - name: Upload dry-run zips
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dry-run
+          path: dist/
