@@ -25,7 +25,7 @@ param(
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
 
-$script:VERSION = '0.1.0'
+$script:VERSION = '0.2.0'
 $script:ADDON = 'SpicySideQuests'
 $script:DEFAULT_CATEGORY = 'General'
 $script:Inv = [Globalization.CultureInfo]::InvariantCulture

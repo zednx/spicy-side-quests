@@ -64,7 +64,7 @@ end
 
 local function create()
 	panel = CreateFrame("Frame", "SpicySideQuestsSettings", UIParent, "BackdropTemplate")
-	panel:SetSize(250, 370)
+	panel:SetSize(250, 394)
 	panel:SetPoint("CENTER")
 	panel:SetFrameStrata("DIALOG")
 	ns.StylePanel(panel, function() return 0.95 end)
@@ -139,6 +139,9 @@ local function create()
 	add(makeCheck(panel, "Show completed",
 		function() return S().showDone end,
 		function(v) S().showDone = v end), 4)
+	add(makeCheck(panel, "Wrap long side quests",
+		function() return S().wrap ~= false end,
+		function(v) S().wrap = v end), 0)
 	add(makeCheck(panel, "Lock window",
 		function() return S().locked end,
 		function(v) S().locked = v end), 0)

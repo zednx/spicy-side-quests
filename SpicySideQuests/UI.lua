@@ -160,36 +160,52 @@ local function createRow(i)
 	return row
 end
 
-local function layoutRow(row, data, rowH)
-	row:SetHeight(rowH)
+-- Lays out one row and returns its height. Items wrap onto extra lines when the
+-- "wrap" setting is on (checkbox and icons stay on the first line).
+local function layoutRow(row, data, rowH, width)
 	row.item, row.header = data.item, data.header
 	row.label:ClearAllPoints()
 
 	if data.header then
+		row:SetHeight(rowH)
 		row.check:Hide()
 		row.loc:Hide()
 		row.del:Hide()
 		row.label:SetFontObject(headerFont)
+		row.label:SetWordWrap(false)
+		row.label:SetWidth(0)
 		row.label:SetPoint("LEFT", 2, 0)
 		row.label:SetPoint("RIGHT", -2, 0)
 		local collapsed = S().collapsed[data.header]
 		row.label:SetText(string.format("%s %s  |cff999999%d/%d|r",
 			collapsed and "+" or "-", escape(data.header), data.open, data.total))
-		return
+		return rowH
 	end
 
+	local s = S()
 	local item = data.item
 	local box = rowH - 2
+	row.check:ClearAllPoints()
+	row.check:SetPoint("TOPLEFT", 0, -1)
 	row.check:SetSize(box, box)
 	row.check:SetChecked(item.done)
 	row.check:Show()
-	local hasLoc = item.zone or item.x
-	row.loc:SetShown(hasLoc and true or false)
+
+	local iconY = -math.floor((rowH - 14) / 2)
+	row.del:ClearAllPoints()
+	row.del:SetPoint("TOPRIGHT", -2, iconY)
+	local hasLoc = (item.zone or item.x) and true or false
+	row.loc:SetShown(hasLoc)
 	row.del:SetShown(row:IsMouseOver())
 
+	-- Label: fixed width so wrapped height can be measured; first line centred on the checkbox.
+	local wrap = s.wrap ~= false
 	row.label:SetFontObject(rowFont)
-	row.label:SetPoint("LEFT", row.check, "RIGHT", 2, 0)
-	row.label:SetPoint("RIGHT", hasLoc and row.loc or row.del, "LEFT", -4, 0)
+	row.label:SetWordWrap(wrap)
+	if row.label.SetNonSpaceWrap then row.label:SetNonSpaceWrap(wrap) end
+	row.label:SetPoint("TOPLEFT", row.check, "TOPRIGHT", 2, -math.max(0, math.floor((box - s.fontSize) / 2)))
+	local iconsW = hasLoc and 34 or 18
+	row.label:SetWidth(math.max(40, width - box - 2 - iconsW - 6))
 
 	local text = escape(item.text)
 	local tags = ""
@@ -205,33 +221,45 @@ local function layoutRow(row, data, rowH)
 	else
 		row.label:SetText(text .. tags .. zone)
 	end
+
+	local h = rowH
+	if wrap then
+		local textH = row.label:GetStringHeight() or 0
+		h = math.max(rowH, math.ceil(textH + (rowH - s.fontSize)))
+	end
+	row:SetHeight(h)
+	return h
 end
 
 ---------------------------------------------------------------------------
 -- Refresh
 ---------------------------------------------------------------------------
+local atEnd = true
+
 function ns:Refresh()
 	if not f or not f:IsShown() then return end
 	local s = S()
 	local data = self:BuildRows(filterText, s.showDone)
 	local rowH = s.fontSize + 8
-	local visible = math.max(1, math.floor((list:GetHeight() or 0) / rowH))
-	offset = math.max(0, math.min(offset, #data - visible))
+	local listH, width = list:GetHeight() or 0, list:GetWidth() or 0
+	offset = math.max(0, math.min(offset, #data - 1))
 
-	for i = 1, visible do
-		local d = data[i + offset]
-		local row = rows[i] or createRow(i)
-		if d then
-			row:ClearAllPoints()
-			row:SetPoint("TOPLEFT", list, "TOPLEFT", 0, -(i - 1) * rowH)
-			row:SetPoint("TOPRIGHT", list, "TOPRIGHT", 0, -(i - 1) * rowH)
-			layoutRow(row, d, rowH)
-			row:Show()
-		else
-			row:Hide()
-		end
+	-- Stack rows by their real (possibly wrapped) heights until the list is full.
+	local y, shown = 0, 0
+	while data[offset + shown + 1] do
+		local idx = shown + 1
+		local row = rows[idx] or createRow(idx)
+		row:ClearAllPoints()
+		row:SetPoint("TOPLEFT", list, "TOPLEFT", 0, -y)
+		row:SetPoint("TOPRIGHT", list, "TOPRIGHT", 0, -y)
+		local h = layoutRow(row, data[offset + idx], rowH, width)
+		if shown > 0 and y + h > listH then break end -- doesn't fit; always show at least one
+		row:Show()
+		y = y + h
+		shown = idx
 	end
-	for i = visible + 1, #rows do rows[i]:Hide() end
+	for i = shown + 1, #rows do rows[i]:Hide() end
+	atEnd = offset + shown >= #data
 
 	local open = 0
 	for _, item in pairs(self.db.items) do
@@ -239,8 +267,8 @@ function ns:Refresh()
 	end
 	f.title:SetText("Spicy Side Quests |cff999999(" .. open .. ")|r")
 
-	if #data > visible then
-		f.scrollInfo:SetText(string.format("%d-%d / %d", offset + 1, math.min(offset + visible, #data), #data))
+	if offset > 0 or not atEnd then
+		f.scrollInfo:SetText(string.format("%d-%d / %d", offset + 1, offset + shown, #data))
 		f.scrollInfo:Show()
 	else
 		f.scrollInfo:Hide()
@@ -457,6 +485,7 @@ function ns:CreateUI()
 	list:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -8, 36)
 	list:EnableMouseWheel(true)
 	list:SetScript("OnMouseWheel", function(_, delta)
+		if delta < 0 and atEnd then return end -- already showing the last row
 		offset = offset - delta * (IsShiftKeyDown() and 5 or 1)
 		if offset < 0 then offset = 0 end
 		ns:Refresh()

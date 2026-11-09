@@ -14,7 +14,7 @@ Works entirely in-game. If you like keeping notes outside the game, **optional**
 - **Two themes**:
   - **Classic**: the familiar Blizzard look
   - **Modern**: flat and minimal, fits UIs like Daylight or ElvUI
-- **Adjustable**: background and window opacity, font size, lock position, hide completed, hide in combat.
+- **Adjustable**: background and window opacity, font size, wrap long side quests, lock position, hide completed, hide in combat.
 - **Lightweight**: no libraries, no dependencies, no ads, nothing phoning home.
 
 ## Screenshots

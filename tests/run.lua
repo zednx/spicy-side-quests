@@ -39,6 +39,16 @@ local function newObj(kind)
 		GetHeight = function(self) return self.h end,
 		GetSize = function(self) return self.w, self.h end,
 		SetSize = function(self, w, h) self.w, self.h = w, h end,
+		SetWidth = function(self, w) self.w = w end,
+		SetHeight = function(self, h) self.h = h end,
+		GetWidth = function(self) return self.w end,
+		SetWordWrap = function(self, v) self.wrap = v end,
+		-- fake text measuring: ~6px per character, 13px per line
+		GetStringHeight = function(self)
+			local chars = #(self.text or "")
+			if not self.wrap or (self.w or 0) <= 0 then return 13 end
+			return 13 * math.max(1, math.ceil(chars * 6 / self.w))
+		end,
 		GetPoint = function() return "CENTER", nil, "CENTER", 10, 20 end,
 		HasFocus = function() return false end,
 		IsMouseOver = function() return false end,
@@ -243,6 +253,31 @@ check("back to classic", not ns:IsModern())
 db.settings.theme = "bogus"
 check("unknown theme falls back", ns:Theme().name == "Classic")
 check("slash commands", SLASH_SPICYSIDEQUESTS1 == "/spicy" and SLASH_SPICYSIDEQUESTS2 == "/ssq")
+
+-- Long side quests wrap onto extra lines (and don't when wrapping is off)
+db.settings.theme = "classic"
+local long = ns:AddItem("This is a very long side quest that should wrap onto several lines instead of being cut off at the edge", "Wrap")
+local function rowFor(item)
+	for _, fr in ipairs(frames) do
+		if fr.label and fr.item == item and fr.shown then return fr end
+	end
+end
+ns:Refresh()
+local rowH = db.settings.fontSize + 8
+local r = rowFor(long)
+check("long item has a row", r ~= nil)
+check("default wraps", db.settings.wrap == true)
+check("wrapped row is taller", r and r.h > rowH)
+check("wrapped label is word-wrapped", r and r.label.wrap == true)
+db.settings.wrap = false
+ns:Refresh()
+r = rowFor(long)
+check("no wrap keeps one line", r and r.h == rowH and r.label.wrap == false)
+db.settings.wrap = true
+-- a short item stays one line
+local short = ns:AddItem("Short", "Wrap")
+ns:Refresh()
+check("short item stays one line", rowFor(short) and rowFor(short).h == rowH)
 
 -- Security: escaping and a hostile/malformed inbox
 check("escape pipes", ns.Escape("a|Hitem:1|h[x]|h|r") == "a||Hitem:1||h[x]||h||r")

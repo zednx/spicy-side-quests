@@ -1,7 +1,7 @@
 -- Spicy Side Quests: data model, persistence and slash commands.
 -- Works fully standalone; the companion app only feeds Inbox.lua.
 local ADDON, ns = ...
-ns.VERSION = "0.1.0"
+ns.VERSION = "0.2.0"
 ns.DEFAULT_CATEGORY = "General"
 ns.TOMBSTONE_DAYS = 30
 
@@ -11,6 +11,7 @@ ns.DEFAULT_SETTINGS = {
 	fontSize = 13,
 	locked = false,
 	showDone = true,
+	wrap = true,         -- long side quests wrap onto extra lines
 	hideInCombat = false,
 	shown = true,
 	width = 320,

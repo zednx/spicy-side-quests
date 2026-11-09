@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.0
+
+### Addon
+- Long side quests now wrap onto extra lines instead of being cut off. Turn it off with **Wrap long side quests** in `/ssq config`.
+
+### Companion
+- Internal: the sync engine is shared with the new Obsidian plugin. No change in behaviour.
+- Docs: troubleshooting for Windows blocking scripts, and an uninstall section.
+
 ## Obsidian plugin 0.1.0
 
 - New: sync a note in your vault with the addon, from inside Obsidian (desktop). No scripts to run, nothing for Windows to block.

@@ -1,6 +1,6 @@
 {
   "name": "spicysidequests",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Optional companion for the Spicy Side Quests addon: syncs a markdown todo file with the game.",
   "license": "MIT",
   "type": "module",
