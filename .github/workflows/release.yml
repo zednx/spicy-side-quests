@@ -27,6 +27,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false # the token is only used by the publish step
+          fetch-depth: 0 # tags, for the version check
 
       - name: Work out the version and check every file agrees
         id: v
@@ -37,6 +38,7 @@ jobs:
           echo "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Bad version '$v'"; exit 1; }
           echo "version=$v" >> "$GITHUB_OUTPUT"
           scripts/check-version.sh "$v"
+          scripts/check-release.sh addon "$v"
 
       - name: Addon tests
         run: |
@@ -68,7 +70,7 @@ jobs:
         env:
           v: ${{ steps.v.outputs.version }}
         run: |
-          awk -v want="## v$v" '$0==want{f=1;next} /^## v/{f=0} f' CHANGELOG.md > notes.md
+          awk -v want="## v$v" '$0==want{f=1;next} /^## /{f=0} f' CHANGELOG.md > notes.md
           cat >> notes.md <<'EOF'
 
           ---

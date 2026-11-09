@@ -2,7 +2,7 @@
 
 ## Releasing a version
 
-1. Bump `version` in `manifest.json` (repo root), and add the same version to `versions.json` (mapped to `minAppVersion`).
+1. Run `scripts/bump-version.sh plugin patch` (fixes) or `minor` (new features), then fill in the new CHANGELOG section and commit.
 2. Push a tag that is **exactly** the version, with no `v` (Obsidian requires this):
    ```bash
    git tag 0.1.0

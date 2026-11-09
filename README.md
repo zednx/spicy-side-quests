@@ -140,6 +140,10 @@ Using Obsidian? The [Obsidian plugin](#obsidian-plugin) avoids all of this. Sign
 
 The addon has no network access and only touches its own data. The optional scripts never connect to the internet and only touch the files listed in [SECURITY.md](SECURITY.md).
 
+## Contributing
+
+Run the tests listed in [CLAUDE.md](CLAUDE.md#tests-run-before-pushing). Releases follow semantic versioning (patch for fixes, minor for new features); `scripts/bump-version.sh` does the bumping.
+
 ## License
 
 [MIT](LICENSE)
