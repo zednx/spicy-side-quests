@@ -1,5 +1,12 @@
 # Changelog
 
+## Obsidian plugin 0.1.0
+
+- New: sync a note in your vault with the addon, from inside Obsidian (desktop). No scripts to run, nothing for Windows to block.
+- Settings: note picker, WoW folder with **Find**, account choice, check interval, **Sync now**, recent activity.
+- Syncs when you edit the note and when the game saves (on `/reload` or logout). Follows the note if you rename or move it.
+- Same sync engine and safety checks as the companion scripts.
+
 ## v0.1.0
 
 First release.

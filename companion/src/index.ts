@@ -4,7 +4,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createPrompter } from "./prompt.ts";
-import { configProblems, defaultConfigDir, isAddonInstalled, loadConfig, migrateOldConfigDir, runSetup, type Config } from "./config.ts";
+import { configProblems, defaultConfigDir, isAddonInstalled, loadConfig, migrateOldConfigDir, type Config } from "./config.ts";
+import { runSetup } from "./setup.ts";
 import { findSavedVariables, readState, syncOnce, type State } from "./sync.ts";
 import { terminalSafe } from "./types.ts";
 

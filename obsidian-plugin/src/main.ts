@@ -358,7 +358,7 @@ class SettingsTab extends PluginSettingTab {
       .setDesc(this.plugin.problem() ?? "Also available from the command palette and by clicking 🌶 in the status bar.")
       .addButton((b) => b.setButtonText("Sync now").setCta().onClick(() => void this.plugin.sync(true)));
 
-    containerEl.createEl("h3", { text: "Recent activity" });
+    new Setting(containerEl).setName("Recent activity").setHeading();
     const log = containerEl.createDiv({ cls: "ssq-activity" });
     const render = () => {
       log.empty();

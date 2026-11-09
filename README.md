@@ -49,7 +49,14 @@ Loot chest @52.1, 41.3
 
 ## Optional: sync with a markdown file
 
-The sync script keeps the addon and a markdown file in step, so you can add or tick off side quests when you're not playing. I use an [Obsidian](https://obsidian.md) note synced to my phone, but **any `.md` file works**.
+Keep the addon and a markdown file in step, so you can add or tick off side quests when you're not playing. I use an [Obsidian](https://obsidian.md) note synced to my phone, but **any `.md` file works**.
+
+There are two ways to sync. Both behave the same:
+
+| | For | Install |
+|---|---|---|
+| **Obsidian plugin** (recommended) | Obsidian on desktop | Inside Obsidian, so nothing for Windows to block |
+| **Sync script** | Any `.md` file, any editor | Download and run (see below) |
 
 ```markdown
 ## Professions
@@ -59,13 +66,26 @@ The sync script keeps the addon and a markdown file in step, so you can add or t
 
 ### How it works
 
-Addons can't access files or the internet, so the script runs outside the game in a terminal window and shows each change as it happens. It only reads and writes this addon's own files and your chosen markdown file.
+Addons can't access files or the internet, so syncing happens outside the game: in the Obsidian plugin, or in a script running in a terminal window that shows each change as it happens. Either way, it only reads and writes this addon's own files and your chosen markdown file.
 
 - **Two-way:** changes sync every time you `/reload` or log out. If the same side quest changed on both sides, the newest change wins.
 - **Leaves your notes alone:** it only rewrites todo lines. Frontmatter, other text, sub-tasks and code blocks stay as they are.
 - **Safe:** if the file goes missing or suddenly has no todos, it skips the sync rather than deleting anything.
 
-### Setup
+### Obsidian plugin
+
+1. In Obsidian, install the **BRAT** community plugin (it installs plugins straight from GitHub).
+2. Run **BRAT: Add a beta plugin** and enter `zednx/spicy-side-quests`.
+3. Enable **Spicy Side Quests** under Settings → Community plugins.
+4. In its settings:
+   - Pick your note (it's created if it doesn't exist).
+   - Click **Find** to locate your WoW Forever folder, or paste the path in.
+
+That's it. It syncs while Obsidian is open, whenever you edit the note or `/reload` in game. 🌶 in the status bar shows the last sync; click it to sync now.
+
+Desktop only: phones can't reach the WoW folder. Edits made on your phone sync once your desktop Obsidian has them.
+
+### Sync script setup
 
 1. Download `SpicySideQuests-Companion-vX.Y.Z.zip` from [Releases](https://github.com/zednx/spicy-side-quests/releases) and extract it anywhere.
 2. Start it:
@@ -110,10 +130,11 @@ Get-ChildItem -Recurse | Unblock-File
 ```
 
 **Still blocked by Smart App Control?** Use one of these:
+- **Obsidian plugin:** if you use Obsidian, the [plugin](#obsidian-plugin) needs no scripts at all.
 - **Node option:** install [Node.js](https://nodejs.org) (signed and trusted by Windows). Open a terminal in the companion folder and run `node src\index.ts --setup`, then `node src\index.ts` from then on. Run it from a terminal; the `.cmd` launchers may still be blocked.
 - **Git clone:** files from `git clone` aren't marked as downloaded. Run `companion\setup-powershell.cmd` from a clone of this repo.
 
-An Obsidian plugin (no scripts at all) and signed scripts are on the way.
+Using Obsidian? The [Obsidian plugin](#obsidian-plugin) avoids all of this. Signed scripts are on the way.
 
 ## Security
 
