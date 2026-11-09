@@ -2,7 +2,7 @@
 
 A lightweight todo list addon for **WoW Forever**, with categories, tags and map waypoints.
 
-It works entirely in-game out of the box. An **optional** companion app (coming soon) syncs the list with a markdown file, such as an Obsidian note, so you can add todos when you're not playing.
+It works entirely in-game out of the box. An **optional** companion script syncs the list with a markdown file, such as an Obsidian note, so you can add todos when you're not playing.
 
 ## Features
 
@@ -48,9 +48,41 @@ Loot chest @52.1, 41.3          (coordinates in your current zone)
 
 > Coordinates aren't available inside dungeons and raids; only the zone name is stored there.
 
-## Markdown sync (planned)
+## Markdown sync (optional)
 
-The companion app will sync a markdown file like this:
+The `companion/` folder has a small script that keeps a markdown file (e.g. an Obsidian note) and the addon in sync. It's plain TypeScript with **no dependencies**, so you can read every line. It runs in a terminal and logs each change it makes.
+
+### How it works
+
+WoW addons can't read files or use the network, so the script works through two files:
+
+| Direction | File |
+|---|---|
+| Markdown → game | Writes `Interface/AddOns/WoWTodoSync/Inbox.lua`. The game loads it but never overwrites it. |
+| Game → markdown | Reads `WTF/Account/<ACCOUNT>/SavedVariables/WoWTodoSync.lua`. The game writes it on `/reload` and logout. |
+
+So changes go both ways **every time you `/reload`** (or log out). If the same todo changes on both sides, the newest change wins.
+
+### Run it
+
+1. Install [Node.js](https://nodejs.org) 22.18 or newer.
+2. Download this repo.
+3. Start the script:
+   - **Windows:** double-click `companion/start.cmd`
+   - **Linux/macOS:** `./companion/start.sh`
+   - **Or:** `node companion/src/index.ts`
+4. The first time, it asks for your markdown file and WoW folder (e.g. `C:\Program Files (x86)\World of Warcraft\_forever_`).
+
+Settings are saved to `%APPDATA%\WoWTodoSync\config.json` on Windows, or `~/.config/wowtodosync/config.json` elsewhere.
+
+| Flag | What it does |
+|---|---|
+| `--once` | Sync one time and exit |
+| `--setup` | Change the markdown file or WoW folder |
+| `--dry-run` | Show what would change without writing |
+| `--config <file>` | Use a different config file |
+
+### Markdown format
 
 ```markdown
 ## Professions
@@ -58,12 +90,21 @@ The companion app will sync a markdown file like this:
 - [x] Unlock Tanaris flight path #travel ^d4e5f6
 ```
 
-How it works: WoW addons can't read files or use the network. The app writes `WoWTodoSync/Inbox.lua` (which the game loads but never overwrites) and reads the addon's SavedVariables. Changes sync both ways on every `/reload` or logout. The addon is fully usable without it.
+- `##` headings are categories. Todos above the first heading go to **General**.
+- `#tags` are normal Obsidian tags.
+- `[zone:: ]` and `[xy:: ]` are [Dataview](https://blacksmithgames.github.io/obsidian-dataview/) inline fields, and both are optional.
+- `^a1b2c3` is a block ID that the script adds to each line so it can track that todo. Don't edit it.
+- The script only rewrites todo lines. Frontmatter, notes, indented sub-tasks and code blocks are left as they are.
+
+> **Safety:** if the markdown file goes missing or suddenly has no todos, the script skips syncing rather than deleting everything in game.
 
 ## Development
 
 ```bash
-lua5.1 tests/run.lua   # headless smoke test with stubbed WoW API
+lua5.1 tests/run.lua          # addon smoke test with a stubbed WoW API
+cd companion && npm test      # companion tests (node:test, no install needed)
+npm install && npm run typecheck
+npm run build:exe             # optional single-file Windows exe (needs Bun)
 ```
 
 ## License
