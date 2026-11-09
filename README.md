@@ -50,7 +50,14 @@ Loot chest @52.1, 41.3          (coordinates in your current zone)
 
 ## Markdown sync (optional)
 
-The `companion/` folder has a small script that keeps a markdown file (e.g. an Obsidian note) and the addon in sync. It's plain TypeScript with **no dependencies**, so you can read every line. It runs in a terminal and logs each change it makes.
+The `companion/` folder has a small script that keeps a markdown file (e.g. an Obsidian note) and the addon in sync. It runs in a terminal and logs each change it makes. It comes in two versions that behave the same and share settings, so you can switch between them:
+
+| Version | Needs | File |
+|---|---|---|
+| **PowerShell** | Nothing on Windows 10/11 (built in) | `companion/powershell/WoWTodoSync.ps1` |
+| **Node** | [Node.js](https://nodejs.org) 22.18+; good for Linux/macOS | `companion/src/` (TypeScript, no dependencies) |
+
+Both are plain source code, so you can read every line before running them.
 
 ### How it works
 
@@ -65,22 +72,23 @@ So changes go both ways **every time you `/reload`** (or log out). If the same t
 
 ### Run it
 
-1. Install [Node.js](https://nodejs.org) 22.18 or newer.
-2. Download this repo.
-3. Start the script:
-   - **Windows:** double-click `companion/start.cmd`
-   - **Linux/macOS:** `./companion/start.sh`
-   - **Or:** `node companion/src/index.ts`
-4. The first time, it asks for your markdown file and WoW folder (e.g. `C:\Program Files (x86)\World of Warcraft\_forever_`).
+1. Download this repo.
+2. Start a script:
+   - **Windows, no install:** double-click `companion/start-powershell.cmd`
+   - **Windows with Node:** double-click `companion/start.cmd`
+   - **Linux/macOS:** `./companion/start.sh` (Node), or `pwsh companion/powershell/WoWTodoSync.ps1`
+3. The first time, it asks for your markdown file and WoW folder (e.g. `C:\Program Files (x86)\World of Warcraft\_forever_`).
+
+> The PowerShell launcher uses `-ExecutionPolicy Bypass` for this one script only, because Windows blocks downloaded scripts by default. It doesn't change any system settings.
 
 Settings are saved to `%APPDATA%\WoWTodoSync\config.json` on Windows, or `~/.config/wowtodosync/config.json` elsewhere.
 
-| Flag | What it does |
-|---|---|
-| `--once` | Sync one time and exit |
-| `--setup` | Change the markdown file or WoW folder |
-| `--dry-run` | Show what would change without writing |
-| `--config <file>` | Use a different config file |
+| Node flag | PowerShell flag | What it does |
+|---|---|---|
+| `--once` | `-Once` | Sync one time and exit |
+| `--setup` | `-Setup` | Change the markdown file or WoW folder |
+| `--dry-run` | `-DryRun` | Show what would change without writing |
+| `--config <file>` | `-Config <file>` | Use a different config file |
 
 ### Markdown format
 
@@ -103,6 +111,7 @@ Settings are saved to `%APPDATA%\WoWTodoSync\config.json` on Windows, or `~/.con
 ```bash
 lua5.1 tests/run.lua          # addon smoke test with a stubbed WoW API
 cd companion && npm test      # companion tests (node:test, no install needed)
+pwsh powershell/test.ps1      # PowerShell edition tests (also run on Windows PowerShell 5.1 in CI)
 npm install && npm run typecheck
 npm run build:exe             # optional single-file Windows exe (needs Bun)
 ```
