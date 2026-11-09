@@ -17,6 +17,15 @@ Works entirely in-game. If you like keeping notes outside the game, **optional**
 - **Adjustable**: background and window opacity, font size, lock position, hide completed, hide in combat.
 - **Lightweight**: no libraries, no dependencies, no ads, nothing phoning home.
 
+## Screenshots
+
+| | |
+|-|-|
+| Classic theme |<img width="465" height="323" alt="Screenshot 2026-11-10 091327" src="https://github.com/user-attachments/assets/ee2924f4-7de2-4ad5-a4de-4702f0a78aed" />|
+| Modern theme |<img width="492" height="355" alt="Screenshot 2026-11-10 091319" src="https://github.com/user-attachments/assets/a4e897f8-0a18-4398-8607-e4bb32ee4368" />|
+| Sync with companion|<img width="923" height="621" alt="Screenshot 2026-11-10 091547" src="https://github.com/user-attachments/assets/3fb1ab5e-9aed-4580-b5ff-bca9f5ca0a79" />|
+
+
 ## Install
 
 Install from CurseForge, or download `SpicySideQuests-vX.Y.Z.zip` from [Releases](https://github.com/zednx/spicy-side-quests/releases). Extract it into `World of Warcraft/_forever_/Interface/AddOns/`, then restart the game.
