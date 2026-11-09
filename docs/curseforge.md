@@ -89,3 +89,7 @@ Addons can't access files or the internet, so the companion runs outside the gam
 ## Feedback
 
 Bugs and ideas are welcome on GitHub Issues. Happy questing! 🌶️
+
+---
+
+> **Disclaimer:** This is a hobby project, 100% vibe coded with AI for my own use. I'm sharing it in case it's useful to someone else. It's provided as-is, with no guarantees, so back up anything important. Feedback and bug reports are welcome!
