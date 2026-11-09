@@ -3,7 +3,8 @@
 // Usage: node src/index.ts [--once] [--setup] [--dry-run] [--force] [--config <file>]
 import fs from "node:fs";
 import path from "node:path";
-import { defaultConfigDir, isAddonInstalled, loadConfig, migrateOldConfigDir, runSetup, type Config } from "./config.ts";
+import { createPrompter } from "./prompt.ts";
+import { configProblems, defaultConfigDir, isAddonInstalled, loadConfig, migrateOldConfigDir, runSetup, type Config } from "./config.ts";
 import { findSavedVariables, readState, syncOnce, type State } from "./sync.ts";
 import { terminalSafe } from "./types.ts";
 
@@ -19,7 +20,7 @@ if (flag("--help") || flag("-h")) {
   console.log(`Spicy Side Quests companion v${VERSION}
 
   --once      sync one time and exit
-  --setup     (re)configure the markdown file and WoW folder
+  --setup     change the markdown file, WoW folder or account
   --dry-run   show what would change without writing files
   --force     allow a sync that would delete every todo
   --config    path to config.json (default: ${path.join(defaultConfigDir(), "config.json")})`);
@@ -40,10 +41,32 @@ const configFile = opt("--config") ?? path.join(defaultConfigDir(), "config.json
 const stateFile = path.join(path.dirname(configFile), "state.json");
 
 let cfg: Config | undefined = loadConfig(configFile);
+const previousTodoFile = cfg?.todoFile;
 if (!cfg || flag("--setup") || !cfg.todoFile || !cfg.wowPath) {
   cfg = await runSetup(configFile, cfg);
+} else {
+  // Paths can go stale (moved vault, reinstalled WoW): say so and offer to fix them.
+  const problems = configProblems(cfg);
+  if (problems.length) {
+    for (const p of problems) warn(p);
+    if (process.stdin.isTTY && !flag("--once")) {
+      const p = createPrompter();
+      const a = (await p.ask("Run setup to fix this now? (Y/n)", "y")).toLowerCase();
+      p.close();
+      if (!a.startsWith("n")) cfg = await runSetup(configFile, cfg);
+    } else {
+      warn("Run setup (setup-powershell.cmd, setup.cmd/setup.sh, or --setup) to fix it.");
+    }
+  }
 }
 const config = cfg;
+
+// A different markdown file has different todos. Forget the old sync history so the
+// first sync just merges both sides instead of treating missing todos as deleted.
+if (previousTodoFile && path.resolve(previousTodoFile) !== path.resolve(config.todoFile) && fs.existsSync(stateFile)) {
+  if (!flag("--dry-run")) fs.rmSync(stateFile);
+  log("Markdown file changed: the next sync merges both sides and deletes nothing.");
+}
 
 console.log(color("1", `Spicy Side Quests v${VERSION}`) + (flag("--dry-run") ? color("33", "  (dry run)") : ""));
 console.log(`  markdown: ${config.todoFile}`);

@@ -271,6 +271,56 @@ Test 'security: atomic writes leave no temp files behind' {
   Remove-Item -Recurse -Force $dir
 }
 
+# --- Setup --------------------------------------------------------------------
+Test 'setup: interactive setup with typed answers, problems and state reset' {
+  $dir = Join-Path ([IO.Path]::GetTempPath()) ("wts-setup-" + [guid]::NewGuid())
+  $wow = Join-Paths $dir '_forever_'
+  [void](New-Item -ItemType Directory -Force (Join-Paths $wow 'Interface' 'AddOns' 'SpicySideQuests'))
+  [IO.File]::WriteAllText((Join-Paths $wow 'Interface' 'AddOns' 'SpicySideQuests' 'SpicySideQuests.toc'), '')
+  foreach ($acc in 'ACC1', 'ACC2') { [void](New-Item -ItemType Directory -Force (Join-Paths $wow 'WTF' 'Account' $acc 'SavedVariables')) }
+  Assert-Eq (Get-Accounts $wow) @('ACC1', 'ACC2')
+
+  # Replace Read-Host with scripted answers ("nope.txt" is rejected first)
+  $md = Join-Path $dir 'Todo.md'
+  $script:answers = [Collections.Generic.Queue[string]]::new()
+  foreach ($a in 'nope.txt', $md, 'y', $wow, '2') { $script:answers.Enqueue($a) }
+  function script:Read-Host { param($Prompt) if ($script:answers.Count) { $script:answers.Dequeue() } else { $null } }
+  try {
+    $cfgFile = Join-Paths $dir 'cfg' 'config.json'
+    $cfg = Invoke-Setup $cfgFile $null *> $null
+    $cfg = Read-Config $cfgFile
+    Assert-Eq $cfg.todoFile $md
+    Assert-Eq $cfg.wowPath $wow
+    Assert-Eq $cfg.account 'ACC2'
+
+    # Enter keeps everything; running out of input is safe once defaults exist
+    $script:answers.Clear()
+    foreach ($a in '', '', '') { $script:answers.Enqueue($a) }
+    [void](Invoke-Setup $cfgFile $cfg *> $null)
+    Assert-Eq (Read-Config $cfgFile).wowPath $wow
+
+    # No answers and no default: cancels instead of looping forever
+    $script:answers.Clear()
+    $threw = $false
+    try { [void](Invoke-Setup (Join-Path $dir 'other.json') $null *> $null) } catch { $threw = $_.Exception.Message -like '*cancelled*' }
+    Assert-True $threw 'setup cancels at end of input'
+  }
+  finally { Remove-Item Function:\Read-Host -ErrorAction SilentlyContinue }
+
+  # Stale paths are reported
+  $stale = @{ todoFile = $md; wowPath = (Join-Path $dir 'moved'); account = 'auto' }
+  Assert-True ((Get-ConfigProblems $stale) -join ' ' -like "*WoW folder doesn't exist*")
+  Assert-True ((Get-ConfigProblems @{ todoFile = $md; wowPath = $wow; account = 'GONE' }) -join ' ' -like '*"GONE" wasn''t found*')
+
+  # Changing the markdown file forgets the old sync history; same file keeps it
+  $state = Join-Path $dir 'state.json'
+  [IO.File]::WriteAllText($state, '{}')
+  Assert-True (-not (Reset-StateIfFileChanged $md $md $state)) 'same file keeps state'
+  Assert-True (Reset-StateIfFileChanged $md (Join-Path $dir 'Other.md') $state) 'different file resets'
+  Assert-True (-not (Test-Path -LiteralPath $state))
+  Remove-Item -Recurse -Force $dir
+}
+
 # --- Node <-> PowerShell compatibility (only when Node 22.18+ is available) --
 $node = Get-Command node -ErrorAction SilentlyContinue
 $nodeOk = $false

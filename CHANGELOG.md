@@ -18,6 +18,7 @@ First release.
 - Two-way sync between the addon and a markdown file (e.g. an Obsidian note) on every `/reload` or logout
 - PowerShell edition (nothing to install on Windows 10/11) and Node.js edition (Linux/macOS), sharing the same settings
 - Keeps non-todo markdown untouched; refuses syncs that would delete everything
+- Guided setup (`setup-powershell.cmd`, `setup.sh`, `--setup`): numbered WoW folder and account choices, Enter keeps current values; warns and offers setup when a saved path no longer exists; switching markdown files never deletes todos
 
 ### Security
 - Hardened against malformed or hostile input; see [SECURITY.md](SECURITY.md)

@@ -71,10 +71,18 @@ Addons can't access files or the internet, so the script runs outside the game i
 2. Start it:
    - **Windows:** double-click `start-powershell.cmd`. Nothing to install; it uses the PowerShell built into Windows 10/11.
    - **Linux/macOS:** run `./start.sh`. It needs [Node.js](https://nodejs.org) 22.18 or newer.
-3. The first time, it asks for your markdown file and your WoW Forever folder (e.g. `C:\Program Files (x86)\World of Warcraft\_forever_`).
+3. The first time, it walks you through picking your markdown file, your WoW Forever folder (e.g. `C:\Program Files (x86)\World of Warcraft\_forever_`) and, if you have several, your WoW account.
 4. Leave it running while you play.
 
-Settings are saved in `%APPDATA%\SpicySideQuests` on Windows, or `~/.config/spicysidequests` elsewhere. Run with `-Setup` (PowerShell) or `--setup` (Node) to change them.
+### Changing paths later
+
+Moved your vault, reinstalled WoW or want a different file? Run **`setup-powershell.cmd`** (Windows), or `./setup.sh` (Linux/macOS). Press Enter to keep any value as it is.
+
+You don't have to remember this, though. If a saved path stops existing, the script tells you and offers to run setup.
+
+Pointing it at a different markdown file is safe. The first sync merges what's in the game with what's in the new file and deletes nothing.
+
+Settings are saved in `%APPDATA%\SpicySideQuests` on Windows, or `~/.config/spicysidequests` elsewhere.
 
 ### Markdown format
 

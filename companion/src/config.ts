@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import readline from "node:readline/promises";
+import { createPrompter } from "./prompt.ts";
 
 export interface Config {
   /** Markdown file to sync, e.g. an Obsidian note. */
@@ -80,41 +80,95 @@ export function detectWowPaths(): string[] {
   return roots.flatMap((r) => flavours.map((f) => path.join(r, f))).filter(isAddonInstalled);
 }
 
-export async function runSetup(file: string, existing?: Config): Promise<Config> {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const ask = async (q: string, def?: string) => {
-    const a = (await rl.question(def ? `${q}\n  [${def}]: ` : `${q}\n  : `)).trim();
-    return a || def || "";
-  };
+/** Account folders under WTF/Account (each has a SavedVariables folder). */
+export function listAccounts(wowPath: string): string[] {
+  const root = path.join(wowPath, "WTF", "Account");
   try {
-    console.log(`\nSpicy Side Quests setup — settings are saved to ${file}\n`);
+    return fs
+      .readdirSync(root, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && fs.existsSync(path.join(root, d.name, "SavedVariables")))
+      .map((d) => d.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
 
+/** Problems with saved settings, e.g. after moving the vault or reinstalling WoW. */
+export function configProblems(cfg: Config): string[] {
+  const out: string[] = [];
+  if (!cfg.todoFile) out.push("No markdown file is set.");
+  else if (!fs.existsSync(path.dirname(cfg.todoFile))) out.push(`The markdown file's folder doesn't exist: ${path.dirname(cfg.todoFile)}`);
+  else if (!fs.existsSync(cfg.todoFile)) out.push(`The markdown file doesn't exist: ${cfg.todoFile}`);
+  if (!cfg.wowPath) out.push("No WoW folder is set.");
+  else if (!fs.existsSync(cfg.wowPath)) out.push(`The WoW folder doesn't exist: ${cfg.wowPath}`);
+  else if (!isAddonInstalled(cfg.wowPath)) out.push(`The addon isn't installed in: ${cfg.wowPath}`);
+  if (cfg.account && cfg.account !== "auto" && cfg.wowPath && !listAccounts(cfg.wowPath).includes(cfg.account)) {
+    out.push(`The WoW account folder "${cfg.account}" wasn't found.`);
+  }
+  return out;
+}
+
+/** Interactive setup. Press Enter to keep the value shown in [brackets]. */
+export async function runSetup(file: string, existing?: Config): Promise<Config> {
+  const prompt = createPrompter();
+  const ask = prompt.ask;
+  const yes = async (q: string, def: "y" | "n") => (await ask(`${q} (${def === "y" ? "Y/n" : "y/N"})`, def)).toLowerCase().startsWith("y");
+  try {
+    console.log(`\n=== Spicy Side Quests setup ===`);
+    console.log(`Settings file: ${file}`);
+    console.log("Press Enter to keep the value in [brackets]. You can paste or drag a path in.\n");
+
+    // 1. Markdown file
     let todoFile = "";
     while (!todoFile) {
-      todoFile = cleanPath(await ask("Path to your markdown todo file (it will be created if missing):", existing?.todoFile));
+      todoFile = cleanPath(await ask("1) Markdown file to sync (any .md file, e.g. an Obsidian note):", existing?.todoFile));
       if (!todoFile.toLowerCase().endsWith(".md")) {
-        console.log("  Please give a .md file.");
+        console.log("   That needs to be a .md file.");
+        todoFile = "";
+      } else if (!fs.existsSync(path.dirname(todoFile))) {
+        console.log(`   The folder ${path.dirname(todoFile)} doesn't exist.`);
+        todoFile = "";
+      } else if (!fs.existsSync(todoFile) && !(await yes("   That file doesn't exist yet. Create it there?", "y"))) {
         todoFile = "";
       }
     }
 
-    const detected = detectWowPaths();
+    // 2. WoW folder
+    const detected = detectWowPaths().filter((p) => p !== existing?.wowPath);
     let wowPath = "";
     while (!wowPath) {
+      console.log("\n2) WoW Forever folder (the one that contains Interface and WTF).");
+      detected.forEach((p, i) => console.log(`   ${i + 1}. ${p}`));
       const def = existing?.wowPath || detected[0];
-      wowPath = cleanPath(await ask("WoW Forever folder (the one that contains Interface and WTF):", def));
+      const a = await ask(detected.length ? "   Type a number from the list, or a path:" : "   Path:", def);
+      const n = Number(a);
+      wowPath = Number.isInteger(n) && n >= 1 && n <= detected.length ? detected[n - 1] : cleanPath(a);
       if (!isAddonInstalled(wowPath)) {
-        console.log(`  Couldn't find ${path.join(addonDir(wowPath), ADDON + ".toc")}.`);
-        const keep = (await ask("  Use this folder anyway? (y/N)", "n")).toLowerCase();
-        if (keep !== "y") wowPath = "";
+        console.log(`   The addon isn't installed there (no ${path.join(addonDir(wowPath), ADDON + ".toc")}).`);
+        if (!(await yes("   Use this folder anyway?", "n"))) wowPath = "";
       }
     }
 
-    const cfg: Config = { todoFile, wowPath, account: existing?.account ?? "auto", pollSeconds: existing?.pollSeconds ?? 2 };
+    // 3. Account (only asked when there's a choice)
+    let account = existing?.account ?? "auto";
+    const accounts = listAccounts(wowPath);
+    if (accounts.length > 1) {
+      console.log("\n3) WoW account. \"auto\" picks the one you played most recently.");
+      accounts.forEach((acc, i) => console.log(`   ${i + 1}. ${acc}`));
+      const a = await ask("   Type a number, or auto:", accounts.includes(account) ? account : "auto");
+      const n = Number(a);
+      account = Number.isInteger(n) && n >= 1 && n <= accounts.length ? accounts[n - 1] : accounts.includes(a) ? a : "auto";
+    } else if (!accounts.includes(account)) {
+      account = "auto";
+    }
+
+    const cfg: Config = { todoFile, wowPath, account, pollSeconds: existing?.pollSeconds ?? 2 };
+    console.log(`\n  markdown: ${cfg.todoFile}\n  game:     ${cfg.wowPath}\n  account:  ${cfg.account}`);
     saveConfig(file, cfg);
-    console.log("\nSaved. Run again with --setup to change these.\n");
+    console.log("\nSaved. Run setup again any time to change these.\n");
     return cfg;
   } finally {
-    rl.close();
+    prompt.close();
   }
 }
