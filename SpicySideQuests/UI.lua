@@ -46,6 +46,7 @@ local function makeEditBox(parent, placeholder)
 	box:SetFontObject(ChatFontNormal)
 	box:SetScript("OnEscapePressed", box.ClearFocus)
 	addPlaceholder(box, placeholder)
+	ns.StyleEditBox(box)
 	return box
 end
 
@@ -62,6 +63,7 @@ local function makeIconButton(parent, texture, size, tooltip)
 		end)
 		b:SetScript("OnLeave", GameTooltip_Hide)
 	end
+	ns.StyleIcon(b)
 	return b
 end
 
@@ -95,11 +97,11 @@ end
 local function createRow(i)
 	local row = CreateFrame("Button", nil, list)
 	row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-	row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-	row:GetHighlightTexture():SetAlpha(0.35)
+	ns.StyleRow(row)
 
-	row.check = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
+	row.check = CreateFrame("CheckButton", nil, row)
 	row.check:SetPoint("LEFT", 0, 0)
+	ns.StyleCheck(row.check)
 	row.check:SetScript("OnClick", function(self)
 		if row.item then ns:SetDone(row.item.id, self:GetChecked()) end
 	end)
@@ -236,7 +238,7 @@ function ns:Refresh()
 	for _, item in pairs(self.db.items) do
 		if not item.deleted and not item.done then open = open + 1 end
 	end
-	f.title:SetText("|cffff7a3dSide Quests|r |cff999999(" .. open .. ")|r")
+	f.title:SetText("Spicy Side Quests |cff999999(" .. open .. ")|r")
 
 	if #data > visible then
 		f.scrollInfo:SetText(string.format("%d-%d / %d", offset + 1, math.min(offset + visible, #data), #data))
@@ -327,14 +329,15 @@ end
 function ns:ApplySettings()
 	if not f then return end
 	local s = S()
-	f:SetBackdropColor(0.05, 0.05, 0.05, s.bgAlpha)
-	f:SetBackdropBorderColor(0.4, 0.4, 0.4, math.max(s.bgAlpha, 0.15))
 	f:SetAlpha(s.alpha)
 
-	local path, _, flags = GameFontHighlight:GetFont()
-	rowFont:SetFont(path, s.fontSize, flags or "")
-	local hpath, _, hflags = GameFontNormal:GetFont()
-	headerFont:SetFont(hpath, s.fontSize + 1, hflags or "")
+	local t = ns:Theme()
+	local path, flags = ns:ThemeFont(GameFontHighlight)
+	rowFont:SetFont(path, s.fontSize, flags)
+	local hpath, hflags = ns:ThemeFont(GameFontNormal)
+	headerFont:SetFont(hpath, s.fontSize + 1, hflags)
+	headerFont:SetTextColor(t.header[1], t.header[2], t.header[3])
+	ns:ApplyTheme() -- restyles every widget, including the backdrop alpha
 
 	f.grip:SetShown(not s.locked)
 	self:Refresh()
@@ -350,12 +353,7 @@ end
 function ns:CreateUI()
 	local s = S()
 	f = CreateFrame("Frame", "SpicySideQuestsFrame", UIParent, "BackdropTemplate")
-	f:SetBackdrop({
-		bgFile = "Interface\\Buttons\\WHITE8X8",
-		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-		edgeSize = 12,
-		insets = { left = 3, right = 3, top = 3, bottom = 3 },
-	})
+	ns.StylePanel(f, function() return S().bgAlpha end)
 	f:SetSize(s.width, s.height)
 	if s.point then
 		f:SetPoint(s.point[1], UIParent, s.point[2], s.point[3], s.point[4])
@@ -384,8 +382,16 @@ function ns:CreateUI()
 	f:SetScript("OnShow", function() ns:Refresh() end)
 
 	-- Title bar
+	f.icon = f:CreateTexture(nil, "ARTWORK")
+	f.icon:SetTexture(ns.CHILLI)
+	f.icon:SetSize(18, 18)
+	f.icon:SetPoint("TOPLEFT", 6, -3)
 	f.title = f:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-	f.title:SetPoint("TOPLEFT", 10, -8)
+	f.title:SetPoint("LEFT", f.icon, "RIGHT", 3, 0)
+	f.title:SetPoint("RIGHT", f, "TOPRIGHT", -44, -12)
+	f.title:SetJustifyH("LEFT")
+	f.title:SetWordWrap(false)
+	ns.StyleTitle(f.title)
 
 	local close = makeIconButton(f, "Interface\\Buttons\\UI-StopButton", 14, "Hide (/ssq)")
 	close:SetPoint("TOPRIGHT", -8, -7)

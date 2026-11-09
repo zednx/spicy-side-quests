@@ -15,6 +15,7 @@ local function newObj(kind)
 		local m = rawget(mt, "methods")[k]
 		if m then return m end
 		-- every other CamelCase widget method is a no-op; plain fields stay nil
+		if k == "Left" or k == "Middle" or k == "Right" then return nil end -- template textures
 		if type(k) == "string" and k:match("^%u") then return function() end end
 	end
 	mt.methods = {
@@ -44,7 +45,12 @@ local function newObj(kind)
 		GetFont = function() return "Fonts\\FRIZQT__.TTF", 12, "" end,
 		CreateFontString = function() return newObj("FontString") end,
 		CreateTexture = function() return newObj("Texture") end,
-		GetHighlightTexture = function() return newObj("Texture") end,
+		GetHighlightTexture = function(self) self.hl = self.hl or newObj("Texture"); return self.hl end,
+		GetNormalTexture = function(self) self.nt = self.nt or newObj("Texture"); return self.nt end,
+		GetPushedTexture = function(self) self.pt = self.pt or newObj("Texture"); return self.pt end,
+		GetCheckedTexture = function(self) self.ct = self.ct or newObj("Texture"); return self.ct end,
+		GetThumbTexture = function(self) self.th = self.th or newObj("Texture"); return self.th end,
+		GetFontString = function(self) self.fs = self.fs or newObj("FontString"); return self.fs end,
 		RegisterEvent = function(self, e) self.events = self.events or {}; self.events[e] = true end,
 		ClearFocus = function() end,
 		GetValue = function(self) return self.value or 0 end,
@@ -61,6 +67,7 @@ end
 function CreateFrame(kind) return newObj(kind) end
 function CreateFont() return newObj("Font") end
 GameFontHighlight, GameFontNormal, ChatFontNormal = newObj("Font"), newObj("Font"), newObj("Font")
+function GetLocale() return "enUS" end
 GameTooltip = newObj("GameTooltip")
 GameTooltip_Hide = function() end
 UIParent = newObj("Frame")
@@ -223,6 +230,19 @@ ns:ToggleUI()
 SlashCmdList.SPICYSIDEQUESTS("reset")
 SlashCmdList.SPICYSIDEQUESTS("help")
 check("help printed", #printed > 0)
+
+-- Themes switch both ways without errors
+check("default theme", ns:Theme().name == "Classic")
+db.settings.theme = "modern"
+ns:ApplySettings()
+ns:ApplyTheme()
+check("modern theme", ns:IsModern() and ns:Theme().name == "Modern")
+db.settings.theme = "classic"
+ns:ApplySettings()
+check("back to classic", not ns:IsModern())
+db.settings.theme = "bogus"
+check("unknown theme falls back", ns:Theme().name == "Classic")
+check("slash commands", SLASH_SPICYSIDEQUESTS1 == "/spicy" and SLASH_SPICYSIDEQUESTS2 == "/ssq")
 
 print = _G.print
 io.write(string.format("%d passed, %d failed\n", passed, failed))

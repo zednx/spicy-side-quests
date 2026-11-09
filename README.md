@@ -1,3 +1,5 @@
+<img src="docs/chilli.png" width="96" align="right" alt="">
+
 # Spicy Side Quests
 
 Your own **side quests** for WoW Forever: a lightweight todo list addon with categories, tags and map waypoints.
@@ -9,6 +11,7 @@ It works entirely in-game out of the box. An **optional** companion script syncs
 - Movable, resizable window with todos grouped by **category** (click a header to collapse it)
 - **Tags** (`#farming`) with a filter box (`#farm`, or plain text)
 - **Locations**: attach your current position or a zone and coordinates; click the map icon to set a waypoint (uses TomTom if installed, otherwise the built-in map pin)
+- **Two themes**: *Classic* (Blizzard style) and *Modern* (flat and minimal, suits UIs like Daylight or ElvUI)
 - Settings for **background opacity**, **window opacity**, **font size**, lock, show/hide completed, hide in combat
 - No libraries, no dependencies
 
