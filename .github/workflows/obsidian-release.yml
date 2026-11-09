@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          fetch-depth: 0 # tags, for the version check
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
@@ -28,6 +29,7 @@ jobs:
           v=$(node -p "require('./manifest.json').version")
           [ "$v" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME but manifest.json says $v"; exit 1; }
           node -e "const v=require('./versions.json'); if(!v['$GITHUB_REF_NAME']) { console.error('versions.json has no entry for $GITHUB_REF_NAME'); process.exit(1) }"
+          scripts/check-release.sh plugin "$GITHUB_REF_NAME"
 
       - name: Build and test
         working-directory: obsidian-plugin
@@ -52,6 +54,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          awk -v want="## Obsidian plugin $GITHUB_REF_NAME" '$0==want{f=1;next} /^## /{f=0} f' CHANGELOG.md > changes.md
           cat > notes.md <<'NOTES'
           Obsidian plugin for Spicy Side Quests: keeps a note in your vault in sync with the WoW Forever addon. Desktop only.
 
@@ -61,5 +64,6 @@ jobs:
           `main.js` was built by GitHub Actions from this tag's source. To check: `gh attestation verify main.js --repo zednx/spicy-side-quests`
           NOTES
           sed -i 's/^          //' notes.md
+          { cat changes.md; echo; echo "---"; cat notes.md; } > release-notes.md
           gh release create "$GITHUB_REF_NAME" dist/main.js dist/manifest.json dist/styles.css dist/SHA256SUMS.txt \
-            --title "Obsidian plugin $GITHUB_REF_NAME" --notes-file notes.md --latest=false
+            --title "Obsidian plugin $GITHUB_REF_NAME" --notes-file release-notes.md --latest=false
