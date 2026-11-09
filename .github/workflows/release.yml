@@ -80,19 +80,22 @@ jobs:
           cat notes.md
 
       - name: Publish GitHub Release
+        id: publish
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           # If the release was already drafted in the GitHub web UI, just attach the files.
+          # A moved/re-pushed tag refreshes the files but doesn't upload to CurseForge again.
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+            echo "existed=true" >> "$GITHUB_OUTPUT"
           else
             gh release create "$GITHUB_REF_NAME" dist/* --title "Spicy Side Quests $GITHUB_REF_NAME" --notes-file notes.md
           fi
 
       - name: Upload to CurseForge
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' && steps.publish.outputs.existed != 'true'
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           CF_PROJECT_ID: "1794870"
