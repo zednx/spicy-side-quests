@@ -1,0 +1,65 @@
+name: obsidian-release
+
+# Push a bare version tag like 0.1.0 (no "v": Obsidian requires the tag to equal the
+# plugin version) to publish the Obsidian plugin: main.js, manifest.json and styles.css.
+# Addon releases use v-prefixed tags and their own workflow.
+on:
+  push:
+    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Check the tag matches manifest.json and versions.json
+        run: |
+          v=$(node -p "require('./manifest.json').version")
+          [ "$v" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME but manifest.json says $v"; exit 1; }
+          node -e "const v=require('./versions.json'); if(!v['$GITHUB_REF_NAME']) { console.error('versions.json has no entry for $GITHUB_REF_NAME'); process.exit(1) }"
+
+      - name: Build and test
+        working-directory: obsidian-plugin
+        run: |
+          npm install --no-save
+          npm run typecheck
+          npm run build
+          npm test
+
+      - name: Collect files
+        run: |
+          mkdir dist
+          cp obsidian-plugin/main.js obsidian-plugin/styles.css manifest.json dist/
+          (cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: dist/main.js
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'NOTES'
+          Obsidian plugin for Spicy Side Quests: keeps a note in your vault in sync with the WoW Forever addon. Desktop only.
+
+          **Install with BRAT:** add the beta plugin `zednx/spicy-side-quests`.
+          **Manual install:** copy `main.js`, `manifest.json` and `styles.css` into `<vault>/.obsidian/plugins/spicy-side-quests/`, then enable it under Settings → Community plugins.
+
+          `main.js` was built by GitHub Actions from this tag's source. To check: `gh attestation verify main.js --repo zednx/spicy-side-quests`
+          NOTES
+          sed -i 's/^          //' notes.md
+          gh release create "$GITHUB_REF_NAME" dist/main.js dist/manifest.json dist/styles.css dist/SHA256SUMS.txt \
+            --title "Obsidian plugin $GITHUB_REF_NAME" --notes-file notes.md --latest=false
