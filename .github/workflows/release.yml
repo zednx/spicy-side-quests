@@ -52,7 +52,8 @@ jobs:
           zip -rq "dist/SpicySideQuests-v$v.zip" SpicySideQuests
           c=stage/SpicySideQuests-Companion
           cp -r companion/src companion/powershell companion/package.json companion/tsconfig.json \
-                companion/start.cmd companion/start.sh companion/start-powershell.cmd README.md LICENSE CHANGELOG.md "$c/"
+                companion/start.cmd companion/start.sh companion/start-powershell.cmd \
+                companion/setup.cmd companion/setup.sh companion/setup-powershell.cmd README.md LICENSE CHANGELOG.md "$c/"
           rm -f "$c/powershell/test.ps1"
           (cd stage && zip -rq "../dist/SpicySideQuests-Companion-v$v.zip" SpicySideQuests-Companion)
           (cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)

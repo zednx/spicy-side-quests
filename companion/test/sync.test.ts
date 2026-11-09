@@ -261,3 +261,43 @@ test("security: readGame skips invalid ids and normalises text", () => {
   assert.equal(g.ok1.category, "C ## D");
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+// --- Setup ---------------------------------------------------------------------
+test("setup: interactive setup, stale-path warning and state reset when the file changes", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wts-setup-"));
+  const wow = path.join(dir, "_forever_");
+  const addon = path.join(wow, "Interface", "AddOns", "SpicySideQuests");
+  fs.mkdirSync(addon, { recursive: true });
+  fs.writeFileSync(path.join(addon, "SpicySideQuests.toc"), "");
+  for (const acc of ["ACC1", "ACC2"]) fs.mkdirSync(path.join(wow, "WTF", "Account", acc, "SavedVariables"), { recursive: true });
+  const cfgFile = path.join(dir, "cfg", "config.json");
+  const entry = path.join(import.meta.dirname, "..", "src", "index.ts");
+  const run = (args: string[], input = "") =>
+    execFileSync(process.execPath, [entry, ...args, "--config", cfgFile], { input, env: { ...process.env, NO_COLOR: "1" } }).toString();
+
+  // 1. First run: answers typed in. "nope.txt" is rejected, then a new .md file is accepted and created.
+  const md1 = path.join(dir, "Todo.md");
+  run(["--setup", "--once"], ["nope.txt", md1, "y", wow, "2"].join("\n") + "\n");
+  const cfg1 = JSON.parse(fs.readFileSync(cfgFile, "utf8"));
+  assert.equal(cfg1.todoFile, md1);
+  assert.equal(cfg1.wowPath, wow);
+  assert.equal(cfg1.account, "ACC2", "picked account 2 from the list");
+  assert.ok(fs.existsSync(md1), "markdown file created by the first sync");
+  assert.ok(fs.existsSync(path.join(dir, "cfg", "state.json")));
+
+  // 2. Stale paths are reported (non-interactive runs just warn).
+  fs.writeFileSync(cfgFile, JSON.stringify({ ...cfg1, wowPath: path.join(dir, "moved") }));
+  const out = run(["--once"]);
+  assert.match(out, /The WoW folder doesn't exist/);
+  assert.match(out, /Run setup/);
+
+  // 3. Switching to a different markdown file forgets the old sync history; Enter keeps the other answers.
+  fs.writeFileSync(cfgFile, JSON.stringify(cfg1));
+  const md2 = path.join(dir, "Other.md");
+  fs.writeFileSync(md2, "## X\n- [ ] keep me ^keep01\n");
+  const out2 = run(["--setup", "--once"], [md2, "", "", ""].join("\n") + "\n");
+  assert.match(out2, /Markdown file changed/);
+  assert.equal(JSON.parse(fs.readFileSync(cfgFile, "utf8")).wowPath, wow, "Enter kept the WoW folder");
+  assert.match(fs.readFileSync(md2, "utf8"), /keep me \^keep01/, "nothing deleted from the new file");
+  fs.rmSync(dir, { recursive: true, force: true });
+});

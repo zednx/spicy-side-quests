@@ -597,27 +597,93 @@ function Find-WowPaths {
   , $found
 }
 
+# Account folders under WTF/Account (each has a SavedVariables folder).
+function Get-Accounts([string]$wow) {
+  $root = Join-Paths $wow 'WTF' 'Account'
+  if (-not $wow -or -not (Test-Path -LiteralPath $root)) { return , @() }
+  , @(Get-ChildItem -LiteralPath $root -Directory | Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'SavedVariables') } | ForEach-Object { $_.Name } | Sort-Object)
+}
+
+# Problems with saved settings, e.g. after moving the vault or reinstalling WoW.
+function Get-ConfigProblems($cfg) {
+  $out = New-Object 'System.Collections.Generic.List[string]'
+  if (-not $cfg.todoFile) { $out.Add('No markdown file is set.') }
+  elseif (-not (Test-Path -LiteralPath (Split-Path -Parent $cfg.todoFile))) { $out.Add("The markdown file's folder doesn't exist: $(Split-Path -Parent $cfg.todoFile)") }
+  elseif (-not (Test-Path -LiteralPath $cfg.todoFile)) { $out.Add("The markdown file doesn't exist: $($cfg.todoFile)") }
+  if (-not $cfg.wowPath) { $out.Add('No WoW folder is set.') }
+  elseif (-not (Test-Path -LiteralPath $cfg.wowPath)) { $out.Add("The WoW folder doesn't exist: $($cfg.wowPath)") }
+  elseif (-not (Test-AddonInstalled $cfg.wowPath)) { $out.Add("The addon isn't installed in: $($cfg.wowPath)") }
+  if ($cfg.account -and $cfg.account -ne 'auto' -and $cfg.wowPath -and (Get-Accounts $cfg.wowPath) -notcontains $cfg.account) { $out.Add("The WoW account folder `"$($cfg.account)`" wasn't found.") }
+  , $out.ToArray()
+}
+
+# A different markdown file has different todos. Forget the old sync history so the
+# first sync just merges both sides instead of treating missing todos as deleted.
+function Reset-StateIfFileChanged([string]$oldFile, [string]$newFile, [string]$stateFile) {
+  if (-not $oldFile -or -not (Test-Path -LiteralPath $stateFile)) { return $false }
+  if ([IO.Path]::GetFullPath($oldFile) -eq [IO.Path]::GetFullPath($newFile)) { return $false }
+  Remove-Item -LiteralPath $stateFile -Force
+  $true
+}
+
+# Interactive setup. Press Enter to keep the value shown in [brackets].
 function Invoke-Setup([string]$file, $existing) {
-  Write-Host "`nSpicy Side Quests setup - settings are saved to $file`n"
-  $ask = { param($q, $def) $a = (Read-Host $(if ($def) { "$q`n  [$def]" } else { $q })).Trim(); if ($a) { $a } else { $def } }
+  Write-Host "`n=== Spicy Side Quests setup ==="
+  Write-Host "Settings file: $file"
+  Write-Host "Press Enter to keep the value in [brackets]. You can paste or drag a path in.`n"
+  $ask = {
+    param($q, $def)
+    $a = Read-Host $(if ($def) { "$q`n  [$def]" } else { "$q`n " })
+    if ($null -eq $a) { if ($def) { return $def }; throw 'Setup cancelled: no more input.' }
+    $a = $a.Trim()
+    if ($a) { $a } else { [string]$def }
+  }
+  $yes = { param($q, $def) ([string](& $ask "$q ($(if ($def -eq 'y') { 'Y/n' } else { 'y/N' }))" $def)).ToLowerInvariant().StartsWith('y') }
+
+  # 1. Markdown file
   $todo = ''
   while (-not $todo) {
-    $todo = Get-CleanPath ([string](& $ask 'Path to your markdown todo file (it will be created if missing)' $(if ($existing) { $existing.todoFile } else { '' })))
-    if (-not $todo.ToLowerInvariant().EndsWith('.md')) { Write-Host '  Please give a .md file.'; $todo = '' }
+    $a = [string](& $ask '1) Markdown file to sync (any .md file, e.g. an Obsidian note)' $(if ($existing) { $existing.todoFile } else { '' }))
+    $todo = if ($a) { Get-CleanPath $a } else { '' }
+    if (-not $todo) { continue }
+    if (-not $todo.ToLowerInvariant().EndsWith('.md')) { Write-Host '   That needs to be a .md file.'; $todo = '' }
+    elseif (-not (Test-Path -LiteralPath (Split-Path -Parent $todo))) { Write-Host "   The folder $(Split-Path -Parent $todo) doesn't exist."; $todo = '' }
+    elseif (-not (Test-Path -LiteralPath $todo) -and -not (& $yes "   That file doesn't exist yet. Create it there?" 'y')) { $todo = '' }
   }
-  $detected = Find-WowPaths
+
+  # 2. WoW folder
+  $detected = @(Find-WowPaths | Where-Object { -not $existing -or $_ -ne $existing.wowPath })
   $wow = ''
   while (-not $wow) {
+    Write-Host "`n2) WoW Forever folder (the one that contains Interface and WTF)."
+    for ($i = 0; $i -lt $detected.Count; $i++) { Write-Host "   $($i + 1). $($detected[$i])" }
     $def = if ($existing -and $existing.wowPath) { $existing.wowPath } elseif ($detected.Count) { $detected[0] } else { '' }
-    $wow = Get-CleanPath ([string](& $ask 'WoW Forever folder (the one that contains Interface and WTF)' $def))
-    if (-not (Test-AddonInstalled $wow)) {
-      Write-Host "  Couldn't find $(Join-Paths (Get-AddonDir $wow) "$($script:ADDON).toc")."
-      if ((& $ask '  Use this folder anyway? (y/N)' 'n') -ne 'y') { $wow = '' }
+    $a = [string](& $ask $(if ($detected.Count) { '   Type a number from the list, or a path' } else { '   Path' }) $def)
+    $n = 0
+    if ([int]::TryParse($a, [ref]$n) -and $n -ge 1 -and $n -le $detected.Count) { $wow = $detected[$n - 1] }
+    elseif ($a) { $wow = Get-CleanPath $a }
+    if ($wow -and -not (Test-AddonInstalled $wow)) {
+      Write-Host "   The addon isn't installed there (no $(Join-Paths (Get-AddonDir $wow) "$($script:ADDON).toc"))."
+      if (-not (& $yes '   Use this folder anyway?' 'n')) { $wow = '' }
     }
   }
-  $cfg = @{ todoFile = $todo; wowPath = $wow; account = $(if ($existing) { $existing.account } else { 'auto' }); pollSeconds = $(if ($existing) { $existing.pollSeconds } else { 2 }) }
+
+  # 3. Account (only asked when there's a choice)
+  $account = if ($existing -and $existing.account) { $existing.account } else { 'auto' }
+  $accounts = Get-Accounts $wow
+  if ($accounts.Count -gt 1) {
+    Write-Host "`n3) WoW account. `"auto`" picks the one you played most recently."
+    for ($i = 0; $i -lt $accounts.Count; $i++) { Write-Host "   $($i + 1). $($accounts[$i])" }
+    $a = [string](& $ask '   Type a number, or auto' $(if ($accounts -contains $account) { $account } else { 'auto' }))
+    $n = 0
+    $account = if ([int]::TryParse($a, [ref]$n) -and $n -ge 1 -and $n -le $accounts.Count) { $accounts[$n - 1] } elseif ($accounts -contains $a) { $a } else { 'auto' }
+  }
+  elseif ($accounts -notcontains $account) { $account = 'auto' }
+
+  $cfg = @{ todoFile = $todo; wowPath = $wow; account = $account; pollSeconds = $(if ($existing) { $existing.pollSeconds } else { 2 }) }
+  Write-Host "`n  markdown: $todo`n  game:     $wow`n  account:  $account"
   Save-Config $file $cfg
-  Write-Host "`nSaved. Run again with -Setup to change these.`n"
+  Write-Host "`nSaved. Run setup again any time to change these.`n"
   $cfg
 }
 
@@ -759,7 +825,23 @@ $configFile = if ($Config) { Get-CleanPath $Config } else { Join-Paths (Get-Defa
 $stateFile = Join-Paths (Split-Path -Parent $configFile) 'state.json'
 
 $cfg = Read-Config $configFile
+$previousTodoFile = if ($cfg) { $cfg.todoFile } else { '' }
 if ($null -eq $cfg -or $Setup -or -not $cfg.todoFile -or -not $cfg.wowPath) { $cfg = Invoke-Setup $configFile $cfg }
+else {
+  # Paths can go stale (moved vault, reinstalled WoW): say so and offer to fix them.
+  $problems = Get-ConfigProblems $cfg
+  if ($problems.Count) {
+    foreach ($p in $problems) { & $warnFn $p }
+    if (-not $Once -and [Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
+      $a = Read-Host 'Run setup to fix this now? (Y/n)'
+      if (-not ([string]$a).Trim().ToLowerInvariant().StartsWith('n')) { $cfg = Invoke-Setup $configFile $cfg }
+    }
+    else { & $warnFn 'Run setup (setup-powershell.cmd, or -Setup) to fix it.' }
+  }
+}
+if (-not $DryRun -and (Reset-StateIfFileChanged $previousTodoFile $cfg.todoFile $stateFile)) {
+  & $logFn 'Markdown file changed: the next sync merges both sides and deletes nothing.'
+}
 
 Write-Host "Spicy Side Quests v$($script:VERSION) (PowerShell)$(if ($DryRun) { '  (dry run)' })"
 Write-Host "  markdown: $($cfg.todoFile)"
