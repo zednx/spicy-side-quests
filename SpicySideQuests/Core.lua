@@ -16,6 +16,7 @@ ns.DEFAULT_SETTINGS = {
 	width = 320,
 	height = 400,
 	point = nil,         -- { point, relPoint, x, y }
+	theme = "classic",   -- "classic" | "modern"
 	lastCategory = "General",
 	collapsed = {},      -- [category] = true
 }

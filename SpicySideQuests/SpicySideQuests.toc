@@ -4,7 +4,7 @@
 ## Author: zednx
 ## Version: 0.1.0
 ## SavedVariables: SpicySideQuestsDB
-## IconTexture: Interface\Icons\INV_Misc_Note_01
+## IconTexture: Interface\AddOns\SpicySideQuests\Media\Chilli
 ## AddonCompartmentFunc: SpicySideQuests_OnCompartmentClick
 
 # Inbox.lua is rewritten by the optional companion app. It must exist at
@@ -12,5 +12,6 @@
 Inbox.lua
 Core.lua
 Location.lua
+Theme.lua
 UI.lua
 Settings.lua

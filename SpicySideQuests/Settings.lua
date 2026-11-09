@@ -20,13 +20,7 @@ local function makeSlider(parent, label, minV, maxV, step, fmt, get, set)
 	s:SetOrientation("HORIZONTAL")
 	s:SetSize(200, 16)
 	s:SetPoint("TOPLEFT", 0, -16)
-	s:SetBackdrop({
-		bgFile = "Interface\\Buttons\\UI-SliderBar-Background",
-		edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
-		tile = true, tileSize = 8, edgeSize = 8,
-		insets = { left = 3, right = 3, top = 6, bottom = 6 },
-	})
-	s:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+	ns.StyleSlider(s)
 	s:SetMinMaxValues(minV, maxV)
 	s:SetValueStep(step)
 	if s.SetObeyStepOnDrag then s:SetObeyStepOnDrag(true) end
@@ -54,8 +48,9 @@ local function makeSlider(parent, label, minV, maxV, step, fmt, get, set)
 end
 
 local function makeCheck(parent, label, get, set)
-	local c = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
+	local c = CreateFrame("CheckButton", nil, parent)
 	c:SetSize(24, 24)
+	ns.StyleCheck(c)
 	local text = c:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 	text:SetPoint("LEFT", c, "RIGHT", 2, 0)
 	text:SetText(label)
@@ -69,17 +64,10 @@ end
 
 local function create()
 	panel = CreateFrame("Frame", "SpicySideQuestsSettings", UIParent, "BackdropTemplate")
-	panel:SetSize(250, 330)
+	panel:SetSize(250, 370)
 	panel:SetPoint("CENTER")
 	panel:SetFrameStrata("DIALOG")
-	panel:SetBackdrop({
-		bgFile = "Interface\\Buttons\\WHITE8X8",
-		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-		edgeSize = 12,
-		insets = { left = 3, right = 3, top = 3, bottom = 3 },
-	})
-	panel:SetBackdropColor(0.05, 0.05, 0.05, 0.95)
-	panel:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+	ns.StylePanel(panel, function() return 0.95 end)
 	panel:EnableMouse(true)
 	panel:SetMovable(true)
 	panel:RegisterForDrag("LeftButton")
@@ -88,9 +76,14 @@ local function create()
 	panel:SetClampedToScreen(true)
 	tinsert(UISpecialFrames, "SpicySideQuestsSettings") -- Esc closes it
 
+	local icon = panel:CreateTexture(nil, "ARTWORK")
+	icon:SetTexture(ns.CHILLI)
+	icon:SetSize(18, 18)
+	icon:SetPoint("TOPLEFT", 6, -3)
 	local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-	title:SetPoint("TOPLEFT", 12, -10)
-	title:SetText("Spicy Side Quests")
+	title:SetPoint("LEFT", icon, "RIGHT", 3, 0)
+	title:SetText("Settings")
+	ns.StyleTitle(title)
 
 	local close = CreateFrame("Button", nil, panel)
 	close:SetSize(14, 14)
@@ -109,6 +102,29 @@ local function create()
 		end
 		widgets[#widgets + 1] = w
 	end
+
+	-- Theme: cycles Classic -> Modern
+	local theme = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	theme:SetSize(200, 22)
+	ns.StyleButton(theme)
+	local function themeLabel()
+		theme:SetText("Theme: " .. ns:Theme().name)
+	end
+	theme:SetScript("OnClick", function()
+		local cur = S().theme
+		for i, key in ipairs(ns.THEME_ORDER) do
+			if key == cur then
+				S().theme = ns.THEME_ORDER[i % #ns.THEME_ORDER + 1]
+				break
+			end
+		end
+		if not ns.THEMES[S().theme] then S().theme = "classic" end
+		themeLabel()
+		ns:ApplySettings()
+		ns:ApplyTheme() -- settings panel too, even if the main window isn't built
+	end)
+	theme.Sync = themeLabel
+	add(theme)
 
 	add(makeSlider(panel, "Background opacity", 0, 1, 0.05, pct,
 		function() return S().bgAlpha end,
@@ -132,6 +148,7 @@ local function create()
 
 	local clear = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	clear:SetSize(140, 22)
+	ns.StyleButton(clear)
 	clear:SetText("Clear completed")
 	clear:SetScript("OnClick", function()
 		local n = ns:ClearCompleted()
@@ -141,6 +158,7 @@ local function create()
 
 	local reset = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	reset:SetSize(140, 22)
+	ns.StyleButton(reset)
 	reset:SetText("Reset window position")
 	reset:SetScript("OnClick", function() ns:ResetPosition() end)
 	add(reset, 4)
