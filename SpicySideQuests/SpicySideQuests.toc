@@ -6,6 +6,8 @@
 ## SavedVariables: SpicySideQuestsDB
 ## IconTexture: Interface\AddOns\SpicySideQuests\Media\Chilli
 ## AddonCompartmentFunc: SpicySideQuests_OnCompartmentClick
+## X-Curse-Project-ID: 1794870
+## X-Website: https://github.com/zednx/spicy-side-quests
 
 # Inbox.lua is rewritten by the optional companion app. It must exist at
 # client start-up so later changes are picked up on /reload.
