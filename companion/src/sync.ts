@@ -35,7 +35,13 @@ const sha = (s: string) => crypto.createHash("sha1").update(s).digest("hex");
 export function readState(file: string): State {
   try {
     const s = JSON.parse(fs.readFileSync(file, "utf8"));
-    return { base: s.base ?? {} };
+    const base: Record<string, Item> = s.base ?? {};
+    // tolerate nulls (e.g. a state file written by another tool)
+    for (const item of Object.values(base) as unknown as Record<string, unknown>[]) {
+      for (const k of Object.keys(item)) if (item[k] === null) delete item[k];
+      if (!Array.isArray(item.tags)) item.tags = [];
+    }
+    return { base };
   } catch {
     return { base: {} };
   }

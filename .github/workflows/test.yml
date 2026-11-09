@@ -21,3 +21,19 @@ jobs:
       - run: npm install --no-save
       - run: npm run typecheck
       - run: npm test
+  powershell-windows:
+    # Windows PowerShell 5.1, what most users have
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: powershell -NoProfile -ExecutionPolicy Bypass -File companion/powershell/test.ps1
+        shell: pwsh
+  powershell-linux:
+    # PowerShell 7
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pwsh -NoProfile -File companion/powershell/test.ps1
