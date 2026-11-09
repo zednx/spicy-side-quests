@@ -1,7 +1,7 @@
 -- Headless smoke test: stubs the WoW API, loads the addon and exercises it.
 -- Run from the repo root: lua5.1 tests/run.lua
-local ADDON = "WoWTodoSync"
-local dir = "WoWTodoSync/"
+local ADDON = "SpicySideQuests"
+local dir = "SpicySideQuests/"
 
 ---------------------------------------------------------------------------
 -- Minimal WoW API stubs
@@ -129,12 +129,12 @@ check("parse coords only", loc.here and loc.x == 45 and loc.y == 60)
 
 -- Load with no saved data and no inbox (standalone)
 fire("ADDON_LOADED", ADDON)
-check("db created", type(WoWTodoSyncDB) == "table" and WoWTodoSyncDB.categories[1] == "General")
+check("db created", type(SpicySideQuestsDB) == "table" and SpicySideQuestsDB.categories[1] == "General")
 fire("PLAYER_LOGIN")
 
 -- Add via slash command
-SlashCmdList.WOWTODOSYNC("add Farm Arcanite #farming @here")
-local db = WoWTodoSyncDB
+SlashCmdList.SPICYSIDEQUESTS("add Farm Arcanite #farming @here")
+local db = SpicySideQuestsDB
 local id = db.order[1]
 local item = db.items[id]
 check("slash add", item and item.text == "Farm Arcanite" and item.category == "General")
@@ -212,7 +212,7 @@ local ns2 = {}
 for line in io.lines(dir .. ADDON .. ".toc") do
 	if line:match("%.lua$") then assert(loadfile(dir .. line))(ADDON, ns2) end
 end
-ns2:InitDB(WoWTodoSyncDB)
+ns2:InitDB(SpicySideQuestsDB)
 check("reload keeps data", ns2.db.items.md0001 and ns2.db.settings.fontSize == 18)
 
 -- UI paths run without errors
@@ -220,8 +220,8 @@ ns:Refresh()
 ns:ToggleSettings()
 ns:ToggleUI()
 ns:ToggleUI()
-SlashCmdList.WOWTODOSYNC("reset")
-SlashCmdList.WOWTODOSYNC("help")
+SlashCmdList.SPICYSIDEQUESTS("reset")
+SlashCmdList.SPICYSIDEQUESTS("help")
 check("help printed", #printed > 0)
 
 print = _G.print

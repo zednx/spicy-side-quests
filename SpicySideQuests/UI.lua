@@ -6,8 +6,8 @@ local rows = {}
 local offset = 0
 local filterText = ""
 local editingId
-local rowFont = CreateFont("WoWTodoSyncRowFont")
-local headerFont = CreateFont("WoWTodoSyncHeaderFont")
+local rowFont = CreateFont("SpicySideQuestsRowFont")
+local headerFont = CreateFont("SpicySideQuestsHeaderFont")
 rowFont:CopyFontObject(GameFontHighlight)
 headerFont:CopyFontObject(GameFontNormal)
 
@@ -236,7 +236,7 @@ function ns:Refresh()
 	for _, item in pairs(self.db.items) do
 		if not item.deleted and not item.done then open = open + 1 end
 	end
-	f.title:SetText("Todo |cff999999(" .. open .. ")|r")
+	f.title:SetText("|cffff7a3dSide Quests|r |cff999999(" .. open .. ")|r")
 
 	if #data > visible then
 		f.scrollInfo:SetText(string.format("%d-%d / %d", offset + 1, math.min(offset + visible, #data), #data))
@@ -252,7 +252,7 @@ end
 ---------------------------------------------------------------------------
 local function endEdit()
 	editingId = nil
-	f.textBox.placeholder:SetText("Add todo... #tag @here")
+	f.textBox.placeholder:SetText("New side quest... #tag @here")
 	f.textBox:SetText("")
 	f.textBox:UpdatePlaceholder()
 end
@@ -349,7 +349,7 @@ end
 
 function ns:CreateUI()
 	local s = S()
-	f = CreateFrame("Frame", "WoWTodoSyncFrame", UIParent, "BackdropTemplate")
+	f = CreateFrame("Frame", "SpicySideQuestsFrame", UIParent, "BackdropTemplate")
 	f:SetBackdrop({
 		bgFile = "Interface\\Buttons\\WHITE8X8",
 		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -387,7 +387,7 @@ function ns:CreateUI()
 	f.title = f:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	f.title:SetPoint("TOPLEFT", 10, -8)
 
-	local close = makeIconButton(f, "Interface\\Buttons\\UI-StopButton", 14, "Hide (/todo)")
+	local close = makeIconButton(f, "Interface\\Buttons\\UI-StopButton", 14, "Hide (/ssq)")
 	close:SetPoint("TOPRIGHT", -8, -7)
 	close:SetScript("OnClick", function() ns:ToggleUI(false) end)
 
@@ -437,7 +437,7 @@ function ns:CreateUI()
 		f.textBox:SetFocus()
 	end)
 
-	f.textBox = makeEditBox(f, "Add todo... #tag @here")
+	f.textBox = makeEditBox(f, "New side quest... #tag @here")
 	f.textBox:SetPoint("LEFT", f.catBox, "RIGHT", 8, 0)
 	f.textBox:SetPoint("RIGHT", here, "LEFT", -6, 0)
 	f.textBox:SetScript("OnEnterPressed", submit)
@@ -463,7 +463,7 @@ function ns:CreateUI()
 
 	f.empty = list:CreateFontString(nil, "ARTWORK", "GameFontDisable")
 	f.empty:SetPoint("CENTER")
-	f.empty:SetText("Nothing here yet.\nType below or use /todo add")
+	f.empty:SetText("No side quests yet.\nType below or use /ssq add")
 
 	-- Hide in combat (optional)
 	f:RegisterEvent("PLAYER_REGEN_DISABLED")

@@ -14,12 +14,22 @@ export interface Config {
   pollSeconds: number;
 }
 
-export const ADDON = "WoWTodoSync";
+export const ADDON = "SpicySideQuests";
 
 export function defaultConfigDir(): string {
   if (process.platform === "win32" && process.env.APPDATA) return path.join(process.env.APPDATA, ADDON);
   const xdg = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
-  return path.join(xdg, "wowtodosync");
+  return path.join(xdg, "spicysidequests");
+}
+
+/** Copies settings from the old "WoW Todo Sync" name, once. */
+export function migrateOldConfigDir(newDir: string) {
+  if (fs.existsSync(newDir)) return false;
+  const xdg = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
+  const old = process.platform === "win32" && process.env.APPDATA ? path.join(process.env.APPDATA, "WoWTodoSync") : path.join(xdg, "wowtodosync");
+  if (!fs.existsSync(old)) return false;
+  fs.cpSync(old, newDir, { recursive: true });
+  return true;
 }
 
 /** Strips quotes (Windows "Copy as path") and expands ~. */
@@ -77,7 +87,7 @@ export async function runSetup(file: string, existing?: Config): Promise<Config>
     return a || def || "";
   };
   try {
-    console.log(`\nWoW Todo Sync setup — settings are saved to ${file}\n`);
+    console.log(`\nSpicy Side Quests setup — settings are saved to ${file}\n`);
 
     let todoFile = "";
     while (!todoFile) {

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// WoW Todo Sync companion — keeps a markdown todo file and the in-game addon in sync.
+// Spicy Side Quests companion — keeps a markdown todo file and the in-game addon in sync.
 // Usage: node src/index.ts [--once] [--setup] [--dry-run] [--force] [--config <file>]
 import fs from "node:fs";
 import path from "node:path";
-import { defaultConfigDir, isAddonInstalled, loadConfig, runSetup, type Config } from "./config.ts";
+import { defaultConfigDir, isAddonInstalled, loadConfig, migrateOldConfigDir, runSetup, type Config } from "./config.ts";
 import { findSavedVariables, readState, syncOnce, type State } from "./sync.ts";
 
 const VERSION = "0.1.0";
@@ -15,7 +15,7 @@ const opt = (name: string) => {
 };
 
 if (flag("--help") || flag("-h")) {
-  console.log(`WoW Todo Sync companion v${VERSION}
+  console.log(`Spicy Side Quests companion v${VERSION}
 
   --once      sync one time and exit
   --setup     (re)configure the markdown file and WoW folder
@@ -31,6 +31,9 @@ const stamp = () => new Date().toTimeString().slice(0, 8);
 const log = (msg: string) => console.log(`${color("90", stamp())} ${msg}`);
 const warn = (msg: string) => console.log(`${color("90", stamp())} ${color("33", msg)}`);
 
+if (!opt("--config") && migrateOldConfigDir(defaultConfigDir())) {
+  log(`Copied your settings from the old WoW Todo Sync folder to ${defaultConfigDir()}`);
+}
 const configFile = opt("--config") ?? path.join(defaultConfigDir(), "config.json");
 const stateFile = path.join(path.dirname(configFile), "state.json");
 
@@ -40,7 +43,7 @@ if (!cfg || flag("--setup") || !cfg.todoFile || !cfg.wowPath) {
 }
 const config = cfg;
 
-console.log(color("1", `WoW Todo Sync v${VERSION}`) + (flag("--dry-run") ? color("33", "  (dry run)") : ""));
+console.log(color("1", `Spicy Side Quests v${VERSION}`) + (flag("--dry-run") ? color("33", "  (dry run)") : ""));
 console.log(`  markdown: ${config.todoFile}`);
 console.log(`  game:     ${config.wowPath}`);
 if (!isAddonInstalled(config.wowPath)) warn("The addon isn't installed in that WoW folder yet.");

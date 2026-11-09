@@ -1,7 +1,7 @@
 # Tests for the PowerShell companion. Mirrors ../test/sync.test.ts.
 # Run: powershell -ExecutionPolicy Bypass -File test.ps1   (or: pwsh test.ps1)
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'WoWTodoSync.ps1') -Library
+. (Join-Path $PSScriptRoot 'SpicySideQuests.ps1') -Library
 Write-Host "PowerShell $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
 
 $script:pass = 0; $script:fail = 0
@@ -33,7 +33,7 @@ $NL = "`n"
 Test 'parses a WoW SavedVariables file' {
   $src = @'
 
-WoWTodoSyncDB = {
+SpicySideQuestsDB = {
 ["items"] = {
 ["abc123"] = {
 ["text"] = "Farm \"Arcanite\"\nnow",
@@ -53,13 +53,13 @@ WoWTodoSyncDB = {
 Other = nil
 '@
   $v = Read-LuaAssignments $src
-  $item = $v['WoWTodoSyncDB']['items']['abc123']
+  $item = $v['SpicySideQuestsDB']['items']['abc123']
   Assert-Eq $item['text'] "Farm `"Arcanite`"${NL}now"
   Assert-Eq $item['done'] $true
   Assert-Eq $item['x'] 52.1
   Assert-True ($item['tags'] -is [array]) 'single tag stays an array'
   Assert-Eq $item['tags'] @('farming')
-  Assert-Eq $v['WoWTodoSyncDB']['order'] @('abc123', 'def456')
+  Assert-Eq $v['SpicySideQuestsDB']['order'] @('abc123', 'def456')
   Assert-True ($null -eq $v['Other'])
 }
 
@@ -168,12 +168,12 @@ Test 'first sync with identical items on both sides changes nothing' {
 Test 'full sync against a fake WoW folder' {
   $dir = Join-Path ([IO.Path]::GetTempPath()) ("wts-" + [guid]::NewGuid())
   $wow = Join-Paths $dir '_forever_'
-  $addon = Join-Paths $wow 'Interface' 'AddOns' 'WoWTodoSync'
+  $addon = Join-Paths $wow 'Interface' 'AddOns' 'SpicySideQuests'
   $svDir = Join-Paths $wow 'WTF' 'Account' 'ME' 'SavedVariables'
   [void](New-Item -ItemType Directory -Force $addon); [void](New-Item -ItemType Directory -Force $svDir)
-  [IO.File]::WriteAllText((Join-Paths $addon 'WoWTodoSync.toc'), '')
+  [IO.File]::WriteAllText((Join-Paths $addon 'SpicySideQuests.toc'), '')
   $t = Get-Now
-  [IO.File]::WriteAllText((Join-Paths $svDir 'WoWTodoSync.lua'), "WoWTodoSyncDB = { [`"items`"] = { [`"g1`"] = { [`"id`"] = `"g1`", [`"text`"] = `"From game`", [`"category`"] = `"Quests`", [`"tags`"] = { `"q`" }, [`"done`"] = false, [`"created`"] = $t, [`"updated`"] = $t } }, [`"order`"] = { `"g1`" }, [`"categories`"] = { `"General`", `"Quests`" } }")
+  [IO.File]::WriteAllText((Join-Paths $svDir 'SpicySideQuests.lua'), "SpicySideQuestsDB = { [`"items`"] = { [`"g1`"] = { [`"id`"] = `"g1`", [`"text`"] = `"From game`", [`"category`"] = `"Quests`", [`"tags`"] = { `"q`" }, [`"done`"] = false, [`"created`"] = $t, [`"updated`"] = $t } }, [`"order`"] = { `"g1`" }, [`"categories`"] = { `"General`", `"Quests`" } }")
   $todo = Join-Paths $dir 'vault' 'Todo.md'
   $cfg = @{ todoFile = $todo; wowPath = $wow; account = 'auto'; pollSeconds = 2 }
   $logs = New-Object 'System.Collections.Generic.List[string]'
@@ -187,7 +187,7 @@ Test 'full sync against a fake WoW folder' {
 
   [IO.File]::WriteAllText($todo, $written.Replace('## Quests', "## Quests${NL}- [ ] Added in Obsidian #md"))
   $state = Invoke-SyncOnce $cfg $state -Log $log -Warn $warn
-  $inbox = (Read-LuaAssignments ([IO.File]::ReadAllText((Join-Paths $addon 'Inbox.lua'))))['WoWTodoSync_Inbox']
+  $inbox = (Read-LuaAssignments ([IO.File]::ReadAllText((Join-Paths $addon 'Inbox.lua'))))['SpicySideQuests_Inbox']
   $texts = @($inbox['items'] | ForEach-Object { $_['text'] }) | Sort-Object
   Assert-Eq $texts @('Added in Obsidian', 'From game')
   Assert-True ([IO.File]::ReadAllText($todo) -match 'Added in Obsidian #md \^\w+') 'id added'
@@ -216,12 +216,12 @@ if ($nodeOk) {
   Test 'Node and PowerShell versions can share config and state' {
     $dir = Join-Path ([IO.Path]::GetTempPath()) ("wts-" + [guid]::NewGuid())
     $wow = Join-Paths $dir '_forever_'
-    $addon = Join-Paths $wow 'Interface' 'AddOns' 'WoWTodoSync'
+    $addon = Join-Paths $wow 'Interface' 'AddOns' 'SpicySideQuests'
     $svDir = Join-Paths $wow 'WTF' 'Account' 'ME' 'SavedVariables'
     [void](New-Item -ItemType Directory -Force $addon); [void](New-Item -ItemType Directory -Force $svDir)
-    [IO.File]::WriteAllText((Join-Paths $addon 'WoWTodoSync.toc'), '')
+    [IO.File]::WriteAllText((Join-Paths $addon 'SpicySideQuests.toc'), '')
     $t = Get-Now
-    [IO.File]::WriteAllText((Join-Paths $svDir 'WoWTodoSync.lua'), "WoWTodoSyncDB = { [`"items`"] = { [`"g1`"] = { [`"id`"] = `"g1`", [`"text`"] = `"Loc item`", [`"category`"] = `"Quests`", [`"tags`"] = {}, [`"zone`"] = `"Durotar`", [`"mapID`"] = 1411, [`"x`"] = 52.1, [`"y`"] = 41.4, [`"done`"] = false, [`"created`"] = $t, [`"updated`"] = $t } } }")
+    [IO.File]::WriteAllText((Join-Paths $svDir 'SpicySideQuests.lua'), "SpicySideQuestsDB = { [`"items`"] = { [`"g1`"] = { [`"id`"] = `"g1`", [`"text`"] = `"Loc item`", [`"category`"] = `"Quests`", [`"tags`"] = {}, [`"zone`"] = `"Durotar`", [`"mapID`"] = 1411, [`"x`"] = 52.1, [`"y`"] = 41.4, [`"done`"] = false, [`"created`"] = $t, [`"updated`"] = $t } } }")
     $todo = Join-Paths $dir 'Todo.md'
     [IO.File]::WriteAllText($todo, "## Quests${NL}- [ ] From markdown #a #b${NL}")
     $cfgFile = Join-Path $dir 'config.json'

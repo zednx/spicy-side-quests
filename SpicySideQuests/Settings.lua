@@ -1,4 +1,4 @@
--- Settings window (/todo config or the gear icon).
+-- Settings window (/ssq config or the gear icon).
 local _, ns = ...
 
 local panel
@@ -68,7 +68,7 @@ local function makeCheck(parent, label, get, set)
 end
 
 local function create()
-	panel = CreateFrame("Frame", "WoWTodoSyncSettings", UIParent, "BackdropTemplate")
+	panel = CreateFrame("Frame", "SpicySideQuestsSettings", UIParent, "BackdropTemplate")
 	panel:SetSize(250, 330)
 	panel:SetPoint("CENTER")
 	panel:SetFrameStrata("DIALOG")
@@ -86,11 +86,11 @@ local function create()
 	panel:SetScript("OnDragStart", panel.StartMoving)
 	panel:SetScript("OnDragStop", panel.StopMovingOrSizing)
 	panel:SetClampedToScreen(true)
-	tinsert(UISpecialFrames, "WoWTodoSyncSettings") -- Esc closes it
+	tinsert(UISpecialFrames, "SpicySideQuestsSettings") -- Esc closes it
 
 	local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	title:SetPoint("TOPLEFT", 12, -10)
-	title:SetText("Todo Settings")
+	title:SetText("Spicy Side Quests")
 
 	local close = CreateFrame("Button", nil, panel)
 	close:SetSize(14, 14)

@@ -25,7 +25,7 @@ tags: [wow, todo]
 
 # WoW Todo
 
-Synced with the WoW Todo Sync addon. Use \`## Headings\` for categories.
+Synced with the Spicy Side Quests addon. Use \`## Headings\` for categories.
 
 ## ${DEFAULT_CATEGORY}
 `;
@@ -59,7 +59,7 @@ function writeAtomic(file: string, content: string) {
   }
 }
 
-/** Finds WTF/Account/<name>/SavedVariables/WoWTodoSync.lua. */
+/** Finds WTF/Account/<name>/SavedVariables/SpicySideQuests.lua. */
 export function findSavedVariables(cfg: Config): string | undefined {
   const accRoot = path.join(cfg.wowPath, "WTF", "Account");
   const file = (acc: string) => path.join(accRoot, acc, "SavedVariables", `${ADDON}.lua`);
@@ -79,7 +79,7 @@ const num = (v: LuaValue | undefined) => (typeof v === "number" ? v : undefined)
 export function readGame(svFile: string | undefined): { items: Record<string, Item>; order: string[]; categories: string[] } {
   const empty = { items: {}, order: [], categories: [] };
   if (!svFile || !fs.existsSync(svFile)) return empty;
-  const db = parseAssignments(fs.readFileSync(svFile, "utf8")).WoWTodoSyncDB;
+  const db = parseAssignments(fs.readFileSync(svFile, "utf8")).SpicySideQuestsDB;
   if (!db || typeof db !== "object" || Array.isArray(db)) return empty;
 
   const items: Record<string, Item> = {};
@@ -116,10 +116,10 @@ export function renderInbox(items: Item[], categories: string[], generated: numb
     items: items.map((i) => ({ ...i, deleted: i.deleted || undefined })),
   };
   return (
-    "-- Written by the WoW Todo Sync companion app. Changes here are overwritten.\n" +
+    "-- Written by the Spicy Side Quests companion app. Changes here are overwritten.\n" +
     "-- Without the companion app this file stays empty and the addon works in-game only.\n" +
     `-- hash: ${hash}\n` +
-    `WoWTodoSync_Inbox = ${toLua(payload)}\n`
+    `SpicySideQuests_Inbox = ${toLua(payload)}\n`
   );
 }
 
