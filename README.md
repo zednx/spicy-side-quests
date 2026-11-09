@@ -189,6 +189,116 @@ Signed scripts are on the way.
 
 </details>
 
+### Getting your note on your phone
+
+The sync runs on your PC, so **any service that keeps a file in sync between your PC and phone** works. Put the note in a synced folder, point the plugin or script at it, and edit it from your phone. Changes reach the game once your PC has them (after your next `/reload`).
+
+| Service | Cost | Good for |
+|---|---|---|
+| [OneDrive](#onedrive) | Free tier, built into Windows | Easiest on Windows |
+| [Dropbox](#dropbox) | Free tier | Works everywhere |
+| [Google Drive](#google-drive) | Free tier | Android users |
+| [iCloud Drive](#icloud-drive) | Free tier | iPhone users |
+| [Syncthing](#syncthing) | Free, open source, no cloud | Privacy |
+| [Obsidian](#obsidian) | Free (Git) or paid (Obsidian Sync) | Obsidian users |
+
+**On your phone** you need an app that edits plain text files:
+- **Android:** [Markor](https://github.com/gsantner/markor) (free, open source) opens files from any of these services.
+- **iPhone:** use the **Files** app to reach the file, plus a markdown or text editor that opens files from Files.
+- **Obsidian:** works directly if your note is in a vault (see [Obsidian](#obsidian)).
+
+#### OneDrive
+
+<details>
+<summary><b>Set up</b></summary>
+
+1. Move your note into your OneDrive folder, e.g. `C:\Users\<you>\OneDrive\Documents\Side Quests.md`.
+2. Right-click the note → **Always keep on this device**, so the sync always sees the latest version.
+3. Point the plugin or script at it (script: run `setup-powershell.cmd`).
+4. On your phone, install OneDrive and open the note with your editor (Android: Markor; iPhone: via the Files app).
+
+</details>
+
+#### Dropbox
+
+<details>
+<summary><b>Set up</b></summary>
+
+1. Install Dropbox on your PC and move your note into the Dropbox folder.
+2. Make sure the file is available offline (not online-only) on your PC.
+3. Point the plugin or script at it.
+4. On your phone, install Dropbox and open the note with your editor (Android: Markor; iPhone: via the Files app).
+
+</details>
+
+#### Google Drive
+
+<details>
+<summary><b>Set up</b></summary>
+
+1. Install **Google Drive for desktop** and move your note into your Drive (e.g. `G:\My Drive\Side Quests.md`).
+2. Right-click the note → **Offline access → Available offline**.
+3. Point the plugin or script at it.
+4. On your phone, open the note with your editor (Android: Markor can open files from Drive; iPhone: via the Files app with Google Drive enabled).
+
+</details>
+
+#### iCloud Drive
+
+<details>
+<summary><b>Set up</b></summary>
+
+1. On Windows, install **iCloud for Windows** (Microsoft Store) and turn on **iCloud Drive**.
+2. Move your note into the iCloud Drive folder, then right-click it → **Always keep on this device**.
+3. Point the plugin or script at it.
+4. On your iPhone, open it from the **Files** app → iCloud Drive with your editor.
+
+iCloud for Windows can take a little while to pick up changes. If a phone edit doesn't show up, give it a minute.
+
+</details>
+
+#### Syncthing
+
+<details>
+<summary><b>Set up</b></summary>
+
+[Syncthing](https://syncthing.net) syncs folders directly between your own devices. Nothing goes through a cloud.
+
+1. Install Syncthing on your PC, and on your phone:
+   - **Android:** Syncthing-Fork
+   - **iPhone:** Möbius Sync
+2. Pair the devices and share the folder that holds your note.
+3. Point the plugin or script at the note on your PC.
+4. Edit it on your phone (Android: Markor).
+
+Both devices need to be on and connected for changes to move, so sync runs while both are awake.
+
+</details>
+
+#### Obsidian
+
+<details>
+<summary><b>Set up</b></summary>
+
+If your note is in an Obsidian vault, use whatever already syncs your vault:
+- **Obsidian Git** (free): what I use. Commits and pulls your vault through a private GitHub repo on desktop and mobile.
+- **Obsidian Sync** (paid): the easiest. Turn it on in each device's Obsidian settings.
+- **iCloud** (iPhone + Windows): keep the vault in iCloud Drive, and use iCloud for Windows on the PC.
+
+Then use the [Obsidian plugin](#obsidian-plugin) on your desktop. Edits made on your phone reach the game once your desktop Obsidian has them.
+
+</details>
+
+<details>
+<summary><b>Tips for any service</b></summary>
+
+- **Keep the note on your PC, not online-only.** "Files on demand" placeholders can delay changes reaching the sync.
+- **Edit one place at a time.** If the same file changes on your phone and PC at once, cloud services may save a "conflicted copy". The sync only reads the original file, so copy any side quests across from the conflicted copy by hand.
+- **The game needs a `/reload`** to pick up changes from the note.
+- **Nothing is lost if a sync is delayed.** If the note is missing or suddenly empty (e.g. halfway through downloading), the sync pauses instead of deleting anything.
+
+</details>
+
 ### Markdown format
 
 <details>
