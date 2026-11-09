@@ -83,6 +83,10 @@ Settings are saved in `%APPDATA%\SpicySideQuests` on Windows, or `~/.config/spic
 - `[zone:: ]` and `[xy:: ]` are optional locations. They're [Dataview](https://blacksmithgames.github.io/obsidian-dataview/)-style fields, so you can query them in Obsidian.
 - `^a1b2c3` is an ID the script adds to each line. Leave it alone.
 
+## Security
+
+The addon has no network access and only touches its own data. The optional scripts never connect to the internet and only touch the files listed in [SECURITY.md](SECURITY.md).
+
 ## License
 
 [MIT](LICENSE)

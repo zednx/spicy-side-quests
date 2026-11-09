@@ -43,6 +43,12 @@ local function trim(s)
 end
 ns.trim = trim
 
+-- WoW treats "|" as an escape character (colours, textures, clickable links).
+-- Every user-supplied string must go through this before it is displayed.
+function ns.Escape(s)
+	return (tostring(s):gsub("|", "||"))
+end
+
 function ns.Print(msg)
 	print("|cffff7a3dSpicy Side Quests:|r " .. tostring(msg))
 end
@@ -292,31 +298,51 @@ end
 ---------------------------------------------------------------------------
 -- Inbox merge (companion app → game). Last write wins per item.
 ---------------------------------------------------------------------------
+local MAX_TEXT, MAX_CATEGORY = 500, 60
+
+local function validId(id)
+	return type(id) == "string" and #id >= 1 and #id <= 64 and not id:find("[^%w%-]")
+end
+
+-- A number within [lo, hi], or nil (also rejects NaN).
+local function coord(v, lo, hi)
+	v = tonumber(v)
+	if v and v >= lo and v <= hi then return v end
+end
+
 function ns:MergeInbox(inbox)
 	if type(inbox) ~= "table" or type(inbox.items) ~= "table" then return 0 end
 	local generated = tonumber(inbox.generated) or 0
 	if generated <= (self.db.lastInbox or 0) then return 0 end
 
-	for _, cat in ipairs(inbox.categories or {}) do
-		self:EnsureCategory(cat)
+	if type(inbox.categories) == "table" then
+		for _, cat in ipairs(inbox.categories) do
+			if type(cat) == "string" and #cat <= MAX_CATEGORY then self:EnsureCategory(cat) end
+		end
 	end
 
 	local n = 0
 	for _, src in ipairs(inbox.items) do
-		if type(src) == "table" and type(src.id) == "string" and type(src.text) == "string" then
+		if type(src) == "table" and validId(src.id) and type(src.text) == "string" and src.text ~= "" then
 			local cur = self.db.items[src.id]
 			if not cur or (tonumber(src.updated) or 0) > (cur.updated or 0) then
+				local tags = {}
+				if type(src.tags) == "table" then
+					for _, t in ipairs(src.tags) do
+						if type(t) == "string" and t ~= "" and #tags < 20 then tags[#tags + 1] = t:sub(1, 40) end
+					end
+				end
 				local item = {
 					id = src.id,
-					text = src.text,
-					tags = type(src.tags) == "table" and src.tags or {},
-					category = self:EnsureCategory(src.category),
-					done = src.done and true or false,
-					deleted = src.deleted and true or nil,
-					zone = src.zone,
-					mapID = tonumber(src.mapID),
-					x = tonumber(src.x),
-					y = tonumber(src.y),
+					text = src.text:sub(1, MAX_TEXT),
+					tags = tags,
+					category = self:EnsureCategory(type(src.category) == "string" and src.category:sub(1, MAX_CATEGORY) or nil),
+					done = src.done == true,
+					deleted = src.deleted == true or nil,
+					zone = type(src.zone) == "string" and src.zone ~= "" and src.zone:sub(1, 80) or nil,
+					mapID = coord(src.mapID, 1, 1e6),
+					x = coord(src.x, 0, 100),
+					y = coord(src.y, 0, 100),
 					created = tonumber(src.created) or (cur and cur.created) or now(),
 					updated = tonumber(src.updated) or now(),
 				}
@@ -390,7 +416,7 @@ SlashCmdList.SPICYSIDEQUESTS = function(msg)
 	elseif cmd == "add" then
 		local item = ns:AddItem(rest, ns.db.settings.lastCategory)
 		if item then
-			ns.Print("New side quest in " .. item.category .. ": " .. item.text)
+			ns.Print("New side quest in " .. ns.Escape(item.category) .. ": " .. ns.Escape(item.text))
 		end
 	elseif cmd == "config" or cmd == "settings" or cmd == "options" then
 		ns:ToggleSettings()

@@ -1,10 +1,14 @@
 name: test
 on: [push, pull_request]
+
+# Tests only need to read the code.
+permissions:
+  contents: read
 jobs:
   lua:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - run: sudo apt-get update && sudo apt-get install -y lua5.1
       - run: for f in SpicySideQuests/*.lua; do luac5.1 -p "$f"; done
       - run: lua5.1 tests/run.lua
@@ -14,19 +18,21 @@ jobs:
       run:
         working-directory: companion
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - run: npm install --no-save
       - run: npm run typecheck
+      - run: sudo apt-get update && sudo apt-get install -y lua5.1 # lets the Inbox.lua round-trip test use real Lua
+        working-directory: .
       - run: npm test
   powershell-windows:
     # Windows PowerShell 5.1, what most users have
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - run: powershell -NoProfile -ExecutionPolicy Bypass -File companion/powershell/test.ps1
@@ -35,5 +41,5 @@ jobs:
     # PowerShell 7
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - run: pwsh -NoProfile -File companion/powershell/test.ps1

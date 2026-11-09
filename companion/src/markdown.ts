@@ -3,13 +3,16 @@
 //
 //   ## Category
 //   - [ ] Text #tag [zone:: Winterspring] [xy:: 63.2, 45.1] ^a1b2c3
-import { DEFAULT_CATEGORY, sameContent, type Item } from "./types.ts";
+import { DEFAULT_CATEGORY, oneLine, sameContent, type Item } from "./types.ts";
 
 const TASK = /^([-*+]) \[(.)\] (.*)$/; // top-level tasks only; indented ones are left alone
-const HEADING = /^(#{2,6})\s+(.+?)\s*#*\s*$/;
+const HEADING = /^#{2,6}[ \t]+(.*)$/;
+const HEADING_CLOSE = /(?:^|[ \t])#+$/; // optional closing "##"
+// Lines longer than this are kept as plain text and never parsed (guards against pathological input).
+export const MAX_LINE = 1000;
 const FENCE = /^\s*(```|~~~)/;
 const BLOCK_ID = /\s+\^([A-Za-z0-9-]+)\s*$/;
-const ZONE = /\[zone::\s*([^\]]*?)\s*\]/i;
+const ZONE = /\[zone::([^\]]*)\]/i;
 const XY = /\[xy::\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*\]/i;
 const TAG = /(^|\s)#([\p{L}\p{N}_/-]+)/gu;
 
@@ -45,7 +48,7 @@ export function parseTaskText(body: string): Omit<MdItem, "category" | "done"> {
   let zone: string | undefined, x: number | undefined, y: number | undefined;
   const zm = ZONE.exec(rest);
   if (zm) {
-    zone = zm[1] || undefined;
+    zone = zm[1].trim() || undefined;
     rest = rest.replace(ZONE, " ");
   }
   const xym = XY.exec(rest);
@@ -79,13 +82,13 @@ export function parseMarkdown(src: string): MdDoc {
       return;
     }
     if (FENCE.test(line)) inFence = !inFence;
-    if (inFence || FENCE.test(line)) {
+    if (inFence || FENCE.test(line) || line.length > MAX_LINE) {
       lines.push({ kind: "text", raw: line });
       return;
     }
     const h = HEADING.exec(line);
-    if (h) {
-      category = h[2].trim();
+    if (h && h[1].trim()) {
+      category = h[1].trimEnd().replace(HEADING_CLOSE, "").trim() || DEFAULT_CATEGORY;
       lines.push({ kind: "heading", raw: line, category });
       return;
     }
@@ -108,11 +111,18 @@ export function mdItems(doc: MdDoc): MdItem[] {
 
 const fmt = (n: number) => (Math.round(n * 10) / 10).toString();
 
+// Values written into the file are reduced to one safe line each, so data from the
+// game can never add extra lines, headings or todos to your notes.
+const cleanTag = (t: string) => t.replace(/[^\p{L}\p{N}_/-]/gu, "");
+const cleanZone = (z: string) => oneLine(z).replace(/[\[\]]/g, "");
+export const cleanCategory = (c: string) => oneLine(c).replace(/^#+\s*/, "") || DEFAULT_CATEGORY;
+
 export function renderItem(item: Item): string {
-  const parts = [item.text];
-  for (const t of item.tags) parts.push("#" + t);
-  if (item.zone) parts.push(`[zone:: ${item.zone}]`);
-  if (item.x !== undefined && item.y !== undefined) parts.push(`[xy:: ${fmt(item.x)}, ${fmt(item.y)}]`);
+  const parts = [oneLine(item.text) || "(untitled)"];
+  for (const t of item.tags.map(cleanTag)) if (/\p{L}/u.test(t)) parts.push("#" + t);
+  const zone = item.zone ? cleanZone(item.zone) : "";
+  if (zone) parts.push(`[zone:: ${zone}]`);
+  if (Number.isFinite(item.x) && Number.isFinite(item.y)) parts.push(`[xy:: ${fmt(item.x!)}, ${fmt(item.y!)}]`);
   parts.push("^" + item.id);
   return `- [${item.done ? "x" : " "}] ${parts.join(" ")}`;
 }
@@ -164,7 +174,7 @@ export function renderMarkdown(doc: MdDoc, items: Item[]): string {
       const last = sections[sections.length - 1];
       while (last.out.length && last.out[last.out.length - 1].trim() === "") last.out.pop();
       if (last.out.length) last.out.push("");
-      sec = { category: item.category, out: [`## ${item.category}`], lastItem: 0, headed: true };
+      sec = { category: item.category, out: [`## ${cleanCategory(item.category)}`], lastItem: 0, headed: true };
       sections.push(sec);
     }
     const at = sec.lastItem >= 0 ? sec.lastItem + 1 : sec.out.length;

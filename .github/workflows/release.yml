@@ -23,13 +23,17 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false # the token is only used by the publish step
 
       - name: Work out the version and check every file agrees
         id: v
         run: |
           if [ "$GITHUB_REF_TYPE" = tag ]; then v="${GITHUB_REF_NAME#v}"
           else v=$(sed -n 's/^## Version: *//p' SpicySideQuests/SpicySideQuests.toc | tr -d '\r'); fi
+          # Only plain X.Y.Z versions; anything else stops the release before it is used anywhere.
+          echo "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Bad version '$v'"; exit 1; }
           echo "version=$v" >> "$GITHUB_OUTPUT"
           scripts/check-version.sh "$v"
 
@@ -40,8 +44,9 @@ jobs:
           lua5.1 tests/run.lua
 
       - name: Build zips
+        env:
+          v: ${{ steps.v.outputs.version }}
         run: |
-          v=${{ steps.v.outputs.version }}
           mkdir -p dist stage/SpicySideQuests-Companion
           zip -rq "dist/SpicySideQuests-v$v.zip" SpicySideQuests
           c=stage/SpicySideQuests-Companion
@@ -53,13 +58,15 @@ jobs:
           unzip -l "dist/SpicySideQuests-v$v.zip"
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
           subject-path: dist/*.zip
 
       - name: Release notes
+        env:
+          v: ${{ steps.v.outputs.version }}
         run: |
-          awk -v want="## v${{ steps.v.outputs.version }}" '$0==want{f=1;next} /^## v/{f=0} f' CHANGELOG.md > notes.md
+          awk -v want="## v$v" '$0==want{f=1;next} /^## v/{f=0} f' CHANGELOG.md > notes.md
           cat >> notes.md <<'EOF'
 
           ---
@@ -84,7 +91,7 @@ jobs:
 
       - name: Upload dry-run zips
         if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dry-run
           path: dist/

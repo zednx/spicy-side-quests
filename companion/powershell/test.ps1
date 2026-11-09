@@ -208,6 +208,69 @@ Test 'full sync against a fake WoW folder' {
   Remove-Item -Recurse -Force $dir
 }
 
+# --- Security regressions ---------------------------------------------------
+Test 'security: ids that look like built-in members are ordinary ids' {
+  $md = Get-MdItems (Read-Markdown "- [ ] hello ^constructor${NL}- [ ] two ^ToString${NL}")
+  $res = Merge-Todos -Base (New-Map) -Md $md -MdTime 1 -Game (New-Map) -GameOrder @() -TombstoneDays 1e9
+  Assert-Eq (@($res.items | ForEach-Object { $_.id })) @('constructor', 'ToString')
+}
+
+Test 'security: deeply nested Lua is rejected cleanly' {
+  $threw = $false
+  try { [void](Read-LuaAssignments ('X = ' + ('{' * 500) + ('}' * 500))) } catch { $threw = $_.Exception.Message -like '*nested too deeply*' }
+  Assert-True $threw 'expected a "nested too deeply" error'
+}
+
+Test 'security: game data cannot inject lines into the markdown file' {
+  $items = @(
+    (New-Item2 @{ id = 'g1'; text = "evil${NL}- [x] injected ^zzz${NL}---"; tags = @("t${NL}x", 'ok'); category = 'A'; zone = "Z]${NL}## Pwned" }),
+    (New-Item2 @{ id = 'g2'; text = 'two'; category = "B${NL}## Pwned" })
+  )
+  Assert-Eq (Format-Markdown (Read-Markdown "## A${NL}") $items) "## A${NL}- [ ] evil - [x] injected ^zzz --- #tx #ok [zone:: Z ## Pwned] ^g1${NL}${NL}## B ## Pwned${NL}- [ ] two ^g2${NL}"
+}
+
+Test "security: pathological lines don't freeze the parser" {
+  $sw = [Diagnostics.Stopwatch]::StartNew()
+  [void](Read-Markdown (@(('## a' + (' ' * 200000) + 'x'), ('- [ ] [zone::' + (' ' * 200000)), ('- [ ] x' + (' ' * 990) + 'y')) -join $NL))
+  Assert-True ($sw.ElapsedMilliseconds -lt 5000) "took $($sw.ElapsedMilliseconds)ms"
+}
+
+Test 'security: terminal escape sequences are stripped from log output' {
+  $e = [string][char]27; $bel = [string][char]7; $csi = [string][char]0x9b
+  Assert-Eq (Get-TerminalSafe "ok $e]52;c;ZXZpbA==$bel $e[2J ${csi}31m done") 'ok ?]52;c;ZXZpbA==? ?[2J ?31m done'
+}
+
+Test 'security: hostile text is escaped in Inbox.lua' {
+  $nasty = "a`"b\c]]d${NL}--e`r" + [char]0 + [char]27 + "[31m'g end`" os.exit(1) --"
+  $lit = ConvertTo-Lua $nasty
+  Assert-True (-not $lit.Contains("`n")) 'no raw newline'
+  Assert-Eq (Read-LuaAssignments "X = $lit")['X'] $nasty 'parser round trip'
+  Assert-Eq (ConvertTo-Lua ([double]::PositiveInfinity)) '0'
+  Assert-Eq (ConvertTo-Lua ([double]::NaN)) '0'
+  # (the Node test suite also round-trips this through a real Lua interpreter)
+}
+
+Test 'security: Read-GameData skips invalid ids and normalises text' {
+  $f = Join-Path ([IO.Path]::GetTempPath()) ("wts-sec-" + [guid]::NewGuid() + '.lua')
+  [IO.File]::WriteAllText($f, 'SpicySideQuestsDB = { items = { a = { id = "../../x", text = "bad" }, b = { id = "ok1", text = "line1\nline2", category = "C\n## D" } } }')
+  $g = (Read-GameData $f).items
+  Assert-Eq (@($g.Keys)) @('ok1')
+  Assert-Eq $g['ok1'].text 'line1 line2'
+  Assert-Eq $g['ok1'].category 'C ## D'
+  Remove-Item -LiteralPath $f -Force
+}
+
+Test 'security: atomic writes leave no temp files behind' {
+  $dir = Join-Path ([IO.Path]::GetTempPath()) ("wts-sec-" + [guid]::NewGuid())
+  [void](New-Item -ItemType Directory -Force $dir)
+  $f = Join-Path $dir 'a.md'
+  Write-FileAtomic $f 'one'
+  Write-FileAtomic $f 'two'
+  Assert-Eq ([IO.File]::ReadAllText($f)) 'two'
+  Assert-Eq (@(Get-ChildItem -LiteralPath $dir).Count) 1 'only the target file remains'
+  Remove-Item -Recurse -Force $dir
+}
+
 # --- Node <-> PowerShell compatibility (only when Node 22.18+ is available) --
 $node = Get-Command node -ErrorAction SilentlyContinue
 $nodeOk = $false

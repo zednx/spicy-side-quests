@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defaultConfigDir, isAddonInstalled, loadConfig, migrateOldConfigDir, runSetup, type Config } from "./config.ts";
 import { findSavedVariables, readState, syncOnce, type State } from "./sync.ts";
+import { terminalSafe } from "./types.ts";
 
 const VERSION = "0.1.0";
 const args = process.argv.slice(2);
@@ -28,8 +29,9 @@ if (flag("--help") || flag("-h")) {
 const tty = process.stdout.isTTY;
 const color = (code: string, s: string) => (tty ? `\x1b[${code}m${s}\x1b[0m` : s);
 const stamp = () => new Date().toTimeString().slice(0, 8);
-const log = (msg: string) => console.log(`${color("90", stamp())} ${msg}`);
-const warn = (msg: string) => console.log(`${color("90", stamp())} ${color("33", msg)}`);
+// Messages can contain todo text, so strip terminal escape sequences before printing.
+const log = (msg: string) => console.log(`${color("90", stamp())} ${terminalSafe(msg)}`);
+const warn = (msg: string) => console.log(`${color("90", stamp())} ${color("33", terminalSafe(msg))}`);
 
 if (!opt("--config") && migrateOldConfigDir(defaultConfigDir())) {
   log(`Copied your settings from the old WoW Todo Sync folder to ${defaultConfigDir()}`);

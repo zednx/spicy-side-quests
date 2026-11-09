@@ -17,9 +17,7 @@ local LOC_COLOR = "|cffffd100"
 
 local function S() return ns.db.settings end
 
-local function escape(s)
-	return (s:gsub("|", "||"))
-end
+local escape = ns.Escape
 
 ---------------------------------------------------------------------------
 -- Small widget helpers
@@ -39,10 +37,11 @@ local function addPlaceholder(box, text)
 	update()
 end
 
-local function makeEditBox(parent, placeholder)
+local function makeEditBox(parent, placeholder, maxLetters)
 	local box = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
 	box:SetHeight(20)
 	box:SetAutoFocus(false)
+	box:SetMaxLetters(maxLetters or 200)
 	box:SetFontObject(ChatFontNormal)
 	box:SetScript("OnEscapePressed", box.ClearFocus)
 	addPlaceholder(box, placeholder)
@@ -75,12 +74,12 @@ local function showItemTooltip(row)
 	if not item then return end
 	GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
 	GameTooltip:AddLine(escape(item.text), 1, 1, 1, true)
-	GameTooltip:AddLine(item.category, 1, 0.82, 0)
+	GameTooltip:AddLine(escape(item.category), 1, 0.82, 0)
 	if item.tags and #item.tags > 0 then
-		GameTooltip:AddLine("#" .. table.concat(item.tags, " #"), 0.4, 0.73, 1, true)
+		GameTooltip:AddLine(escape("#" .. table.concat(item.tags, " #")), 0.4, 0.73, 1, true)
 	end
 	local loc = ns.FormatLocation(item)
-	if loc then GameTooltip:AddLine(loc, 1, 0.82, 0) end
+	if loc then GameTooltip:AddLine(escape(loc), 1, 0.82, 0) end
 	GameTooltip:AddLine(" ")
 	GameTooltip:AddLine("Click: complete  |  Right-click: edit", 0.6, 0.6, 0.6)
 	if loc then GameTooltip:AddLine("Map icon: set waypoint", 0.6, 0.6, 0.6) end
@@ -150,7 +149,7 @@ local function createRow(i)
 			showItemTooltip(self)
 		elseif self.header then
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-			GameTooltip:AddLine(self.header, 1, 0.82, 0)
+			GameTooltip:AddLine(escape(self.header), 1, 0.82, 0)
 			GameTooltip:AddLine("Click: collapse/expand  |  Right-click: add here", 0.6, 0.6, 0.6)
 			GameTooltip:Show()
 		end
@@ -413,7 +412,7 @@ function ns:CreateUI()
 	f.filterBox:SetScript("OnEnterPressed", f.filterBox.ClearFocus)
 
 	-- Add row (bottom)
-	f.catBox = makeEditBox(f, "Category")
+	f.catBox = makeEditBox(f, "Category", 60)
 	f.catBox:SetWidth(80)
 	f.catBox:SetPoint("BOTTOMLEFT", 12, 10)
 	f.catBox:SetText(s.lastCategory or ns.DEFAULT_CATEGORY)
@@ -443,7 +442,7 @@ function ns:CreateUI()
 		f.textBox:SetFocus()
 	end)
 
-	f.textBox = makeEditBox(f, "New side quest... #tag @here")
+	f.textBox = makeEditBox(f, "New side quest... #tag @here", 300)
 	f.textBox:SetPoint("LEFT", f.catBox, "RIGHT", 8, 0)
 	f.textBox:SetPoint("RIGHT", here, "LEFT", -6, 0)
 	f.textBox:SetScript("OnEnterPressed", submit)

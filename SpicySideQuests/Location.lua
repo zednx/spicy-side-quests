@@ -73,7 +73,7 @@ end
 function ns:SetWaypoint(item)
 	local mapID = item.mapID or ns.ResolveMapID(item.zone)
 	if mapID and not item.mapID then item.mapID = mapID end
-	local where = ns.FormatLocation(item) or "?"
+	local where = ns.Escape(ns.FormatLocation(item) or "?")
 
 	if not (mapID and item.x and item.y) then
 		ns.Print("Location: " .. where .. (mapID and "" or " (no coordinates)"))
@@ -84,7 +84,7 @@ function ns:SetWaypoint(item)
 
 	if TomTom and TomTom.AddWaypoint then
 		local ok = pcall(TomTom.AddWaypoint, TomTom, mapID, x, y, {
-			title = item.text, persistent = false, minimap = true, world = true,
+			title = ns.Escape(item.text), persistent = false, minimap = true, world = true,
 		})
 		if ok then
 			ns.Print("TomTom waypoint: " .. where)
