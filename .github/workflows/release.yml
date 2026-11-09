@@ -4,6 +4,7 @@ name: release
 #   SpicySideQuests-vX.Y.Z.zip            the addon (upload this one to CurseForge)
 #   SpicySideQuests-Companion-vX.Y.Z.zip  the optional sync scripts
 #   SHA256SUMS.txt
+# and uploads the addon zip to CurseForge when the CF_API_KEY secret is set.
 # Every zip also gets a GitHub build attestation, so anyone can check it was
 # built here from this repo's source: gh attestation verify <zip> --repo zednx/spicy-side-quests
 #
@@ -71,7 +72,7 @@ jobs:
 
           ---
           **Install:** download `SpicySideQuests-v*.zip`, extract it into `World of Warcraft/_forever_/Interface/AddOns/`, then restart the game.
-          **Optional sync:** download the Companion zip and see the [README](https://github.com/zednx/spicy-side-quests#markdown-sync-optional).
+          **Optional sync:** download the Companion zip and see the [README](https://github.com/zednx/spicy-side-quests#optional-sync-with-a-markdown-file).
 
           These zips were built by GitHub Actions from this tag's source. To check: `gh attestation verify <zip> --repo zednx/spicy-side-quests`
           EOF
@@ -88,6 +89,20 @@ jobs:
           else
             gh release create "$GITHUB_REF_NAME" dist/* --title "Spicy Side Quests $GITHUB_REF_NAME" --notes-file notes.md
           fi
+
+      - name: Upload to CurseForge
+        if: github.ref_type == 'tag'
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          CF_PROJECT_ID: "1794870"
+          CF_GAME_VERSIONS: ${{ vars.CF_GAME_VERSIONS }}
+          v: ${{ steps.v.outputs.version }}
+        run: |
+          if [ -z "$CF_API_KEY" ]; then
+            echo "::warning::CF_API_KEY secret not set, skipping the CurseForge upload."
+            exit 0
+          fi
+          scripts/curseforge-upload.sh "dist/SpicySideQuests-v$v.zip" "$v" notes.md
 
       - name: Upload dry-run zips
         if: github.ref_type != 'tag'

@@ -1,5 +1,19 @@
 # CurseForge listing
 
+Project: <https://authors.curseforge.com/#/projects/1794870/general> (id **1794870**)
+
+## Automatic uploads
+
+Each `v*` tag uploads the addon zip to CurseForge, set to the newest **WoW Forever** game version, with the changelog section as release notes. To turn it on:
+
+1. On CurseForge, create an **API token** (your account settings → API tokens).
+2. On GitHub, open the repo's **Settings → Secrets and variables → Actions → New repository secret**:
+   - Name: `CF_API_KEY`
+   - Secret: the token
+3. If the upload picks the wrong game version, also add a repository **variable** `CF_GAME_VERSIONS` with the right version id(s), comma-separated. The workflow log lists them.
+
+Without the secret, releases still publish on GitHub and just skip CurseForge.
+
 Everything to fill in when creating the project at <https://authors.curseforge.com> (Create Project → World of Warcraft → Addon).
 
 ## Project settings
