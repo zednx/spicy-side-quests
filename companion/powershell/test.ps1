@@ -2,6 +2,7 @@
 # Run: powershell -ExecutionPolicy Bypass -File test.ps1   (or: pwsh test.ps1)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'WoWTodoSync.ps1') -Library
+Write-Host "PowerShell $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
 
 $script:pass = 0; $script:fail = 0
 function Test($name, [scriptblock]$body) {
