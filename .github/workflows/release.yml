@@ -74,7 +74,13 @@ jobs:
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --title "Spicy Side Quests $GITHUB_REF_NAME" --notes-file notes.md
+        run: |
+          # If the release was already drafted in the GitHub web UI, just attach the files.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* --title "Spicy Side Quests $GITHUB_REF_NAME" --notes-file notes.md
+          fi
 
       - name: Upload dry-run zips
         if: github.ref_type != 'tag'
