@@ -15,6 +15,8 @@
 
 They make no network connections, run no other programs and never execute anything they read. Game files are parsed as data, never run.
 
+**Obsidian plugin** (optional, desktop only) uses the same sync engine as the scripts. It touches the same game files, plus your chosen note, which it edits through Obsidian's vault API. It keeps its settings and sync history in its own plugin data. It never overwrites edits you make while a sync is running; it retries instead.
+
 ## Safeguards
 
 - Text from markdown is escaped before it goes into `Inbox.lua`, so a todo can't inject code into the game. Tests round-trip hostile strings through a real Lua interpreter.
