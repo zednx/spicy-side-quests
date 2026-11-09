@@ -49,5 +49,5 @@ Claude sessions can't push tags. Ask the user to run `git tag … && git push or
 - **Escape user text:** `|` in anything the addon shows (`ns.Escape`), terminal escape sequences in script output (`terminalSafe` / `Get-TerminalSafe`), Lua strings via `toLua` / `ConvertTo-Lua`. Values written to markdown go through `oneLine`.
 - **Never delete the user's todos by accident:** keep the mass-delete guard, and reset the sync history when the markdown file changes.
 - **Leave non-todo markdown untouched.**
-- GitHub owner is **zednx**. Don't reintroduce the old username anywhere.
+- The GitHub owner is **zednx** (repo: `zednx/spicy-side-quests`).
 - Pin GitHub Actions to commit SHAs; pin new npm dev dependencies to versions at least two weeks old.
