@@ -1,7 +1,7 @@
 // Three-way merge between the markdown file, the game and the last synced state.
 // When both sides changed the same item, the most recent change wins.
 import { toItem, type MdItem } from "./markdown.ts";
-import { now, sameContent, type Item } from "./types.ts";
+import { now, own, sameContent, type Item } from "./types.ts";
 
 export interface MergeInput {
   base: Record<string, Item>; // state after the previous sync
@@ -43,14 +43,14 @@ export function merge(input: MergeInput): MergeResult {
     }
   };
   mdMap.forEach((_, id) => push(id));
-  (input.gameOrder ?? []).forEach((id) => game[id] && push(id));
+  (input.gameOrder ?? []).forEach((id) => own(game, id) && push(id));
   Object.keys(game).forEach(push);
   Object.keys(base).forEach(push);
 
   const items: Item[] = [];
   for (const id of ids) {
-    const b = base[id];
-    const g = game[id];
+    const b = own(base, id);
+    const g = own(game, id);
     const m = mdMap.get(id);
 
     let fromMd: Item | undefined;

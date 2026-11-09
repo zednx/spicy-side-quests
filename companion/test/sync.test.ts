@@ -8,7 +8,8 @@ import { parseAssignments, toLua } from "../src/lua.ts";
 import { mdItems, parseMarkdown, renderMarkdown } from "../src/markdown.ts";
 import { merge } from "../src/merge.ts";
 import { readGame, readState, syncOnce, type State } from "../src/sync.ts";
-import { now, type Item } from "../src/types.ts";
+import { now, terminalSafe, type Item } from "../src/types.ts";
+import { execFileSync } from "node:child_process";
 
 let n = 0;
 const newId = () => `new${++n}`;
@@ -47,7 +48,7 @@ Other = nil
 test("Lua round trip", () => {
   const data = { a: "q\"uo\\te|", list: [1, 2.5, true], nested: { "odd key": "ü" } };
   const back = parseAssignments(`X = ${toLua(data)}`).X;
-  assert.deepEqual(back, data);
+  assert.deepEqual(JSON.parse(JSON.stringify(back)), data);
 });
 
 // --- Markdown --------------------------------------------------------------
@@ -199,4 +200,64 @@ test("full sync against a fake WoW folder", () => {
 
 test("readGame tolerates a missing file", () => {
   assert.deepEqual(readGame(undefined).items, {});
+});
+
+// --- Security regressions ----------------------------------------------------
+test("security: ids that look like Object.prototype members are ordinary ids", () => {
+  const md = mdItems(parseMarkdown("- [ ] hello ^constructor\n- [ ] two ^toString\n"));
+  const res = merge({ base: {}, md, mdTime: 1, game: {}, newId });
+  assert.deepEqual(res.items.map((i) => i.id), ["constructor", "toString"]);
+  assert.ok(res.log.every((l) => l.includes("added")), res.log.join("; "));
+});
+
+test("security: Lua keys like __proto__ never change an object's prototype", () => {
+  const v = parseAssignments('X = { ["__proto__"] = { polluted = true }, a = 1 }').X as Record<string, unknown>;
+  assert.equal((v as { polluted?: boolean }).polluted, undefined);
+  assert.deepEqual(Object.keys(v).sort(), ["__proto__", "a"]);
+  assert.equal(({} as { polluted?: boolean }).polluted, undefined);
+});
+
+test("security: deeply nested Lua is rejected cleanly", () => {
+  assert.throws(() => parseAssignments("X = " + "{".repeat(5000) + "}".repeat(5000)), /nested too deeply/);
+});
+
+test("security: game data cannot inject lines into the markdown file", () => {
+  const out = renderMarkdown(parseMarkdown("## A\n"), [
+    item({ id: "g1", text: "evil\n- [x] injected ^zzz\n---", tags: ["t\nx", "ok"], category: "A", zone: "Z]\n## Pwned" }),
+    item({ id: "g2", text: "two", category: "B\n## Pwned" }),
+  ]);
+  assert.equal(out, "## A\n- [ ] evil - [x] injected ^zzz --- #tx #ok [zone:: Z ## Pwned] ^g1\n\n## B ## Pwned\n- [ ] two ^g2\n");
+});
+
+test("security: pathological lines don't freeze the parser", () => {
+  const start = performance.now();
+  parseMarkdown(["## a" + " ".repeat(200000) + "x", "- [ ] [zone::" + " ".repeat(200000), "- [ ] x" + " ".repeat(999) + "y"].join("\n"));
+  assert.ok(performance.now() - start < 2000, `took ${performance.now() - start}ms`);
+});
+
+test("security: terminal escape sequences are stripped from log output", () => {
+  assert.equal(terminalSafe("ok \x1b]52;c;ZXZpbA==\x07 \x1b[2J \x9b31m done"), "ok ?]52;c;ZXZpbA==? ?[2J ?31m done");
+});
+
+test("security: hostile text survives the Inbox.lua round trip through real Lua unchanged", (t) => {
+  let lua = "";
+  for (const bin of ["lua5.1", "lua"]) {
+    try { execFileSync(bin, ["-v"], { stdio: "ignore" }); lua = bin; break; } catch {}
+  }
+  if (!lua) return t.skip("no Lua interpreter installed");
+  const nasty = 'a"b\\c]]d\n--e\r\x00\x1b[31m\'g\u2028 end" os.exit(1) --';
+  const src = "X = " + toLua({ s: nasty, n: [1 / 0, NaN] }) + "\nio.write(X.s, '|', X.n[1], '|', X.n[2])";
+  const out = execFileSync(lua, ["-"], { input: src }).toString("latin1");
+  assert.equal(Buffer.from(out, "latin1").toString("utf8"), nasty + "|0|0");
+});
+
+test("security: readGame skips invalid ids and normalises text", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wts-sec-"));
+  const f = path.join(dir, "sv.lua");
+  fs.writeFileSync(f, 'SpicySideQuestsDB = { items = { a = { id = "../../x", text = "bad" }, b = { id = "ok1", text = "line1\\nline2", category = "C\\n## D" } } }');
+  const g = readGame(f).items;
+  assert.deepEqual(Object.keys(g), ["ok1"]);
+  assert.equal(g.ok1.text, "line1 line2");
+  assert.equal(g.ok1.category, "C ## D");
+  fs.rmSync(dir, { recursive: true, force: true });
 });

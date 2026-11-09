@@ -6,7 +6,7 @@ export type LuaValue = string | number | boolean | null | LuaValue[] | { [k: str
 /** Parses `Name = value` assignments, e.g. a SavedVariables file. */
 export function parseAssignments(src: string): Record<string, LuaValue> {
   const p = new Parser(src);
-  const out: Record<string, LuaValue> = {};
+  const out: Record<string, LuaValue> = Object.create(null);
   p.skip();
   while (!p.eof()) {
     const name = p.ident();
@@ -20,8 +20,11 @@ export function parseAssignments(src: string): Record<string, LuaValue> {
   return out;
 }
 
+const MAX_DEPTH = 32;
+
 class Parser {
   i = 0;
+  depth = 0;
   src: string;
   constructor(src: string) {
     this.src = src;
@@ -118,11 +121,13 @@ class Parser {
 
   table(): LuaValue {
     this.expect("{");
-    const keyed: Record<string, LuaValue> = {};
+    if (++this.depth > MAX_DEPTH) this.fail("tables nested too deeply");
+    const keyed: Record<string, LuaValue> = Object.create(null); // no prototype: keys like "__proto__" stay plain keys
     const list: LuaValue[] = [];
     let hasKeys = false;
     for (;;) {
       this.skip();
+      if (this.eof()) this.fail("unterminated table");
       if (this.peek() === "}") {
         this.i++;
         break;
@@ -155,6 +160,7 @@ class Parser {
       this.skip();
       if (this.peek() === "," || this.peek() === ";") this.i++;
     }
+    this.depth--;
     if (!hasKeys) return list;
     list.forEach((v, idx) => (keyed[String(idx + 1)] = v));
     return keyed;

@@ -4,9 +4,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { ADDON, addonDir, type Config } from "./config.ts";
 import { parseAssignments, toLua, type LuaValue } from "./lua.ts";
-import { mdItems, parseMarkdown, renderMarkdown } from "./markdown.ts";
+import { cleanCategory, mdItems, parseMarkdown, renderMarkdown } from "./markdown.ts";
 import { merge } from "./merge.ts";
-import { DEFAULT_CATEGORY, now, type Item } from "./types.ts";
+import { DEFAULT_CATEGORY, dict, isValidId, now, oneLine, own, type Item } from "./types.ts";
 
 export interface State {
   base: Record<string, Item>;
@@ -35,22 +35,25 @@ const sha = (s: string) => crypto.createHash("sha1").update(s).digest("hex");
 export function readState(file: string): State {
   try {
     const s = JSON.parse(fs.readFileSync(file, "utf8"));
-    const base: Record<string, Item> = s.base ?? {};
-    // tolerate nulls (e.g. a state file written by another tool)
-    for (const item of Object.values(base) as unknown as Record<string, unknown>[]) {
-      for (const k of Object.keys(item)) if (item[k] === null) delete item[k];
-      if (!Array.isArray(item.tags)) item.tags = [];
+    const base = dict<Item>();
+    for (const [id, raw] of Object.entries((s.base ?? {}) as Record<string, Record<string, unknown>>)) {
+      if (!isValidId(id) || !raw || typeof raw !== "object" || typeof raw.text !== "string") continue;
+      // tolerate nulls (e.g. a state file written by the PowerShell edition)
+      for (const k of Object.keys(raw)) if (raw[k] === null) delete raw[k];
+      if (!Array.isArray(raw.tags)) raw.tags = [];
+      base[id] = { ...(raw as unknown as Item), id };
     }
     return { base };
   } catch {
-    return { base: {} };
+    return { base: dict() };
   }
 }
 
 function writeAtomic(file: string, content: string) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const tmp = file + ".tmp";
-  fs.writeFileSync(tmp, content);
+  // Random, exclusive temp name: never follows a pre-existing file or symlink.
+  const tmp = `${file}.${crypto.randomBytes(6).toString("hex")}.tmp`;
+  fs.writeFileSync(tmp, content, { flag: "wx" });
   try {
     fs.renameSync(tmp, file);
   } catch {
@@ -82,18 +85,18 @@ export function readGame(svFile: string | undefined): { items: Record<string, It
   const db = parseAssignments(fs.readFileSync(svFile, "utf8")).SpicySideQuestsDB;
   if (!db || typeof db !== "object" || Array.isArray(db)) return empty;
 
-  const items: Record<string, Item> = {};
+  const items = dict<Item>();
   const rawItems = db.items;
   if (rawItems && typeof rawItems === "object") {
     for (const v of Object.values(rawItems)) {
       if (!v || typeof v !== "object" || Array.isArray(v)) continue;
       const id = str(v.id), text = str(v.text);
-      if (!id || text === undefined) continue;
+      if (!isValidId(id) || text === undefined || own(items, id)) continue;
       items[id] = {
         id,
-        text,
+        text: oneLine(text),
         tags: Array.isArray(v.tags) ? v.tags.filter((t): t is string => typeof t === "string") : [],
-        category: str(v.category) || DEFAULT_CATEGORY,
+        category: cleanCategory(str(v.category) ?? ""),
         done: v.done === true,
         deleted: v.deleted === true || undefined,
         zone: str(v.zone),
@@ -192,7 +195,7 @@ export function syncOnce(cfg: Config, state: State, opts: SyncOptions): State | 
     if (result.log.some((l) => l.startsWith("markdown"))) opts.log("Type /reload in game to see markdown changes.");
   }
 
-  const base: Record<string, Item> = {};
+  const base = dict<Item>();
   for (const i of result.items) base[i.id] = i;
   return { base };
 }

@@ -244,6 +244,33 @@ db.settings.theme = "bogus"
 check("unknown theme falls back", ns:Theme().name == "Classic")
 check("slash commands", SLASH_SPICYSIDEQUESTS1 == "/spicy" and SLASH_SPICYSIDEQUESTS2 == "/ssq")
 
+-- Security: escaping and a hostile/malformed inbox
+check("escape pipes", ns.Escape("a|Hitem:1|h[x]|h|r") == "a||Hitem:1||h[x]||h||r")
+clock = clock + 1000
+local before = 0
+for _ in pairs(db.items) do before = before + 1 end
+local ok, merged = pcall(ns.MergeInbox, ns, {
+	generated = clock,
+	categories = { 42, { "x" }, "Good" },
+	items = {
+		{ id = "../evil", text = "bad id" },
+		{ id = "ok0001", text = "fine", tags = { "a", 5, {}, "b" }, category = 7, zone = {}, x = "1e999", y = 0/0, mapID = -5, done = "yes" },
+		{ id = "ok0002", text = string.rep("x", 5000), category = string.rep("c", 500) },
+		"not a table",
+		{ id = 123, text = "number id" },
+	},
+})
+check("hostile inbox does not error", ok)
+check("hostile inbox merged only valid items", merged == 2)
+local o1, o2 = db.items.ok0001, db.items.ok0002
+check("tags filtered to strings", o1 and #o1.tags == 2 and o1.tags[1] == "a" and o1.tags[2] == "b")
+check("bad category falls back", o1 and o1.category == "General")
+check("bad zone/coords dropped", o1 and o1.zone == nil and o1.x == nil and o1.y == nil and o1.mapID == nil)
+check("done must be true", o1 and o1.done == false)
+check("long text capped", o2 and #o2.text == 500 and #o2.category == 60)
+check("bad id rejected", db.items["../evil"] == nil)
+
+
 print = _G.print
 io.write(string.format("%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

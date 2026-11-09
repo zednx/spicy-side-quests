@@ -43,7 +43,16 @@ function Get-Key($d, [string]$k) {
   return $v
 }
 function Get-Now { [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() }
-function Format-Num($n) { ([double]$n).ToString('R', $script:Inv) }
+function Format-Num($n) { $d = [double]$n; if ([double]::IsNaN($d) -or [double]::IsInfinity($d)) { return '0' }; $d.ToString('R', $script:Inv) }
+
+# Same rule as Obsidian block IDs (and the addon): letters, digits and dashes.
+function Test-ValidId($id) { ($id -is [string]) -and ($id -cmatch '^[A-Za-z0-9-]{1,64}$') }
+
+# Single-line text: control characters and line separators become spaces.
+function Get-OneLine([string]$s) { (($s -replace '[\x00-\x1f\x7f\u2028\u2029]', ' ') -replace ' {2,}', ' ').Trim() }
+
+# Text that is safe to print to a terminal (no escape sequences).
+function Get-TerminalSafe([string]$s) { $s -replace '[\x00-\x1f\x7f-\x9f]', '?' }
 function Round1($v) { if ($null -eq $v) { $null } else { [math]::Round([double]$v * 10, [MidpointRounding]::AwayFromZero) / 10 } }
 
 #region Lua --------------------------------------------------------------------
@@ -110,6 +119,8 @@ function Read-LuaValue {
 
 function Read-LuaTable {
   $script:LI++ # {
+  $script:LDepth++
+  if ($script:LDepth -gt 32) { Read-LuaFail 'tables nested too deeply' }
   $keyed = New-Map
   $list = New-Object 'System.Collections.Generic.List[object]'
   $hasKeys = $false
@@ -146,6 +157,7 @@ function Read-LuaTable {
     Read-LuaSkip
     if ($script:LI -lt $script:LS.Length -and ($script:LS[$script:LI] -eq ',' -or $script:LS[$script:LI] -eq ';')) { $script:LI++ }
   }
+  $script:LDepth--
   if (-not $hasKeys) { return , $list.ToArray() }
   for ($n = 0; $n -lt $list.Count; $n++) { $keyed[[string]($n + 1)] = $list[$n] }
   return , $keyed
@@ -155,6 +167,7 @@ function Read-LuaTable {
 function Read-LuaAssignments([string]$Src) {
   $script:LS = $Src
   $script:LI = 0
+  $script:LDepth = 0
   $out = New-Map
   Read-LuaSkip
   while ($script:LI -lt $script:LS.Length) {
@@ -262,10 +275,13 @@ function ConvertTo-ItemOutput($i) {
 
 #region Markdown ---------------------------------------------------------------
 $script:ReTask = [regex]'^([-*+]) \[(.)\] (.*)$'
-$script:ReHeading = [regex]'^(#{2,6})\s+(.+?)\s*#*\s*$'
+$script:ReHeading = [regex]'^#{2,6}[ \t]+(.*)$'
+$script:ReHeadingClose = [regex]'(?:^|[ \t])#+$'
+# Lines longer than this are kept as plain text and never parsed (guards against pathological input).
+$script:MAX_LINE = 1000
 $script:ReFence = [regex]'^\s*(```|~~~)'
 $script:ReBlockId = [regex]'\s+\^([A-Za-z0-9-]+)\s*$'
-$script:ReZone = [regex]'(?i)\[zone::\s*([^\]]*?)\s*\]'
+$script:ReZone = [regex]'(?i)\[zone::([^\]]*)\]'
 $script:ReXY = [regex]'(?i)\[xy::\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*\]'
 $script:ReTag = [regex]'(^|\s)#([\p{L}\p{N}_/-]+)'
 
@@ -275,7 +291,7 @@ function Read-TaskText([string]$body) {
   $m = $script:ReBlockId.Match($rest)
   if ($m.Success) { $id = $m.Groups[1].Value; $rest = $rest.Substring(0, $m.Index) }
   $m = $script:ReZone.Match($rest)
-  if ($m.Success) { if ($m.Groups[1].Value) { $zone = $m.Groups[1].Value }; $rest = $script:ReZone.Replace($rest, ' ', 1) }
+  if ($m.Success) { if ($m.Groups[1].Value.Trim()) { $zone = $m.Groups[1].Value.Trim() }; $rest = $script:ReZone.Replace($rest, ' ', 1) }
   $m = $script:ReXY.Match($rest)
   if ($m.Success) {
     $x = [double]::Parse($m.Groups[1].Value, $script:Inv); $y = [double]::Parse($m.Groups[2].Value, $script:Inv)
@@ -310,10 +326,12 @@ function Read-Markdown([string]$src) {
     }
     $isFence = $script:ReFence.IsMatch($line)
     if ($isFence) { $inFence = -not $inFence }
+    if ($line.Length -gt $script:MAX_LINE) { $lines.Add(@{ kind = 'text'; raw = $line }); continue }
     if ($inFence -or $isFence) { $lines.Add(@{ kind = 'text'; raw = $line }); continue }
     $h = $script:ReHeading.Match($line)
-    if ($h.Success) {
-      $category = $h.Groups[2].Value.Trim()
+    if ($h.Success -and $h.Groups[1].Value.Trim()) {
+      $category = $script:ReHeadingClose.Replace($h.Groups[1].Value.TrimEnd(), '').Trim()
+      if (-not $category) { $category = $script:DEFAULT_CATEGORY }
       $lines.Add(@{ kind = 'heading'; raw = $line; category = $category })
       continue
     }
@@ -338,11 +356,17 @@ function Get-MdItems($doc) {
   return , $out
 }
 
+# Values written into the file are reduced to one safe line each, so data from the
+# game can never add extra lines, headings or todos to your notes.
+function Get-CleanCategory([string]$c) { $v = (Get-OneLine $c) -replace '^#+\s*', ''; if ($v) { $v } else { $script:DEFAULT_CATEGORY } }
+
 function Format-TodoLine($item) {
   $parts = New-Object 'System.Collections.Generic.List[string]'
-  $parts.Add($item.text)
-  foreach ($t in @($item.tags)) { $parts.Add('#' + $t) }
-  if ($item.zone) { $parts.Add("[zone:: $($item.zone)]") }
+  $text = Get-OneLine ([string]$item.text)
+  $parts.Add($(if ($text) { $text } else { '(untitled)' }))
+  foreach ($t in @($item.tags)) { $ct = ([string]$t) -replace '[^\p{L}\p{N}_/-]', ''; if ($ct -match '\p{L}') { $parts.Add('#' + $ct) } }
+  $zone = if ($item.zone) { (Get-OneLine ([string]$item.zone)) -replace '[\[\]]', '' } else { '' }
+  if ($zone) { $parts.Add("[zone:: $zone]") }
   if ($null -ne $item.x -and $null -ne $item.y) { $parts.Add("[xy:: $(Format-Num (Round1 $item.x)), $(Format-Num (Round1 $item.y))]") }
   $parts.Add('^' + $item.id)
   $box = if ($item.done) { 'x' } else { ' ' }
@@ -400,7 +424,7 @@ function Format-Markdown($doc, $items) {
       $last = $sections[$sections.Count - 1].out
       while ($last.Count -gt 0 -and $last[$last.Count - 1].Trim() -eq '') { $last.RemoveAt($last.Count - 1) }
       if ($last.Count -gt 0) { $last.Add('') }
-      $o = New-Object 'System.Collections.Generic.List[string]'; $o.Add("## $($item.category)")
+      $o = New-Object 'System.Collections.Generic.List[string]'; $o.Add("## $(Get-CleanCategory $item.category)")
       $target = @{ category = $item.category; out = $o; lastItem = 0; headed = $true }
       $sections.Add($target)
     }
@@ -530,8 +554,11 @@ function Test-AddonInstalled([string]$wow) { $wow -and (Test-Path -LiteralPath (
 function Write-FileAtomic([string]$file, [string]$content) {
   $dir = Split-Path -Parent $file
   if ($dir -and -not (Test-Path -LiteralPath $dir)) { [void](New-Item -ItemType Directory -Force -Path $dir) }
-  $tmp = "$file.tmp"
-  [IO.File]::WriteAllText($tmp, $content, $script:Utf8)
+  # Random, exclusive temp name: never follows a pre-existing file or symlink.
+  $tmp = "$file.$([guid]::NewGuid().ToString('N').Substring(0, 12)).tmp"
+  $bytes = $script:Utf8.GetBytes($content)
+  $fs = New-Object IO.FileStream($tmp, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write)
+  try { $fs.Write($bytes, 0, $bytes.Length) } finally { $fs.Dispose() }
   try {
     if (Test-Path -LiteralPath $file) { [IO.File]::Replace($tmp, $file, [NullString]::Value) } else { [IO.File]::Move($tmp, $file) }
   }
@@ -617,8 +644,11 @@ function Read-GameData([string]$svFile) {
     foreach ($v in @($items.Values)) {
       if ($v -isnot [Collections.IDictionary]) { continue }
       $id = Get-Key $v 'id'; $text = Get-Key $v 'text'
-      if ($id -isnot [string] -or $text -isnot [string]) { continue }
-      $res.items[$id] = New-TodoItem $v
+      if (-not (Test-ValidId $id) -or $text -isnot [string] -or $res.items.ContainsKey($id)) { continue }
+      $item = New-TodoItem $v
+      $item.text = Get-OneLine $item.text
+      $item.category = Get-CleanCategory $item.category
+      $res.items[$id] = $item
     }
   }
   foreach ($k in 'order', 'categories') {
@@ -634,7 +664,9 @@ function Read-State([string]$file) {
     try {
       $s = [IO.File]::ReadAllText($file) | ConvertFrom-Json
       if ($s.PSObject.Properties['base'] -and $s.base) {
-        foreach ($p in $s.base.PSObject.Properties) { $base[$p.Name] = New-TodoItem $p.Value }
+        foreach ($p in $s.base.PSObject.Properties) {
+          if ((Test-ValidId $p.Name) -and $p.Value -and $p.Value.PSObject.Properties['text']) { $base[$p.Name] = New-TodoItem $p.Value; $base[$p.Name].id = $p.Name }
+        }
       }
     }
     catch { }
@@ -718,8 +750,9 @@ function Invoke-SyncOnce($cfg, $state, [switch]$DryRun, [switch]$Force, [scriptb
 if ($Library) { return }
 
 #region Main -------------------------------------------------------------------
-$logFn = { param($m) Write-Host "$(Get-Date -Format 'HH:mm:ss') " -ForegroundColor DarkGray -NoNewline; Write-Host $m }
-$warnFn = { param($m) Write-Host "$(Get-Date -Format 'HH:mm:ss') " -ForegroundColor DarkGray -NoNewline; Write-Host $m -ForegroundColor Yellow }
+# Messages can contain todo text, so strip terminal escape sequences before printing.
+$logFn = { param($m) Write-Host "$(Get-Date -Format 'HH:mm:ss') " -ForegroundColor DarkGray -NoNewline; Write-Host (Get-TerminalSafe $m) }
+$warnFn = { param($m) Write-Host "$(Get-Date -Format 'HH:mm:ss') " -ForegroundColor DarkGray -NoNewline; Write-Host (Get-TerminalSafe $m) -ForegroundColor Yellow }
 
 if (-not $Config -and (Move-OldConfigDir (Get-DefaultConfigDir))) { & $logFn "Copied your settings from the old WoW Todo Sync folder to $(Get-DefaultConfigDir)" }
 $configFile = if ($Config) { Get-CleanPath $Config } else { Join-Paths (Get-DefaultConfigDir) 'config.json' }
