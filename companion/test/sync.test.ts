@@ -160,7 +160,7 @@ test("first sync with identical items on both sides changes nothing", () => {
 });
 
 // --- End to end ------------------------------------------------------------
-test("full sync against a fake WoW folder", () => {
+test("full sync against a fake WoW folder", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wts-"));
   const wow = path.join(dir, "_forever_");
   const addon = path.join(wow, "Interface", "AddOns", "SpicySideQuests");
@@ -178,14 +178,14 @@ test("full sync against a fake WoW folder", () => {
   const logs: string[] = [];
   const opts = { log: (m: string) => logs.push(m), warn: (m: string) => logs.push("WARN " + m) };
 
-  let state: State | undefined = syncOnce(cfg, readState(path.join(dir, "none.json")), opts);
+  let state: State | undefined = await syncOnce(cfg, readState(path.join(dir, "none.json")), opts);
   assert.ok(state);
   const written = fs.readFileSync(todo, "utf8");
   assert.match(written, /## Quests\n- \[ \] From game #q \^g1/);
 
   // add a todo in markdown -> appears in Inbox.lua
   fs.writeFileSync(todo, written.replace("## Quests", "## Quests\n- [ ] Added in Obsidian #md"));
-  state = syncOnce(cfg, state, opts)!;
+  state = (await syncOnce(cfg, state, opts))!;
   const inbox = parseAssignments(fs.readFileSync(path.join(addon, "Inbox.lua"), "utf8")).SpicySideQuests_Inbox as any;
   const texts = inbox.items.map((i: any) => i.text);
   assert.deepEqual(texts.sort(), ["Added in Obsidian", "From game"]);
@@ -193,7 +193,7 @@ test("full sync against a fake WoW folder", () => {
 
   // emptying the file is refused
   fs.writeFileSync(todo, "# nothing\n");
-  assert.equal(syncOnce(cfg, state, opts), undefined);
+  assert.equal(await syncOnce(cfg, state!, opts), undefined);
   assert.ok(logs.some((l) => l.startsWith("WARN")));
   fs.rmSync(dir, { recursive: true, force: true });
 });

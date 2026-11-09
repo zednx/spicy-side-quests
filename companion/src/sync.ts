@@ -12,11 +12,37 @@ export interface State {
   base: Record<string, Item>;
 }
 
+/** Where the markdown file lives. The scripts use the disk; the Obsidian plugin uses the vault API. */
+export interface TodoIO {
+  /** Current text and modified time (unix seconds), or undefined if the file doesn't exist. */
+  read(): Promise<{ text: string; mtime: number } | undefined>;
+  /** Writes `text`. `expected` is what read() returned; an editor-backed implementation should
+   *  throw if the file changed since, so a sync never overwrites edits made in the meantime. */
+  write(text: string, expected?: string): Promise<void>;
+  /** Shown in messages, e.g. the file path. */
+  name: string;
+}
+
+export function fileTodoIO(file: string): TodoIO {
+  return {
+    name: file,
+    async read() {
+      if (!fs.existsSync(file)) return undefined;
+      return { text: fs.readFileSync(file, "utf8"), mtime: Math.floor(fs.statSync(file).mtimeMs / 1000) };
+    },
+    async write(text) {
+      writeAtomic(file, text);
+    },
+  };
+}
+
 export interface SyncOptions {
   dryRun?: boolean;
   force?: boolean;
   log: (msg: string) => void;
   warn: (msg: string) => void;
+  /** Defaults to the file at cfg.todoFile. */
+  todo?: TodoIO;
 }
 
 const NEW_FILE = `---
@@ -34,7 +60,16 @@ const sha = (s: string) => crypto.createHash("sha1").update(s).digest("hex");
 
 export function readState(file: string): State {
   try {
-    const s = JSON.parse(fs.readFileSync(file, "utf8"));
+    return stateFromJSON(JSON.parse(fs.readFileSync(file, "utf8")));
+  } catch {
+    return { base: dict() };
+  }
+}
+
+/** Validates sync state loaded from JSON (a state file, or the Obsidian plugin's data). */
+export function stateFromJSON(s: { base?: unknown } | null | undefined): State {
+  try {
+    if (!s || typeof s !== "object") return { base: dict() };
     const base = dict<Item>();
     for (const [id, raw] of Object.entries((s.base ?? {}) as Record<string, Record<string, unknown>>)) {
       if (!isValidId(id) || !raw || typeof raw !== "object" || typeof raw.text !== "string") continue;
@@ -136,21 +171,23 @@ function newId(taken: Set<string>): string {
 }
 
 /** Runs one sync pass. Returns the new state, or undefined if nothing could be synced. */
-export function syncOnce(cfg: Config, state: State, opts: SyncOptions): State | undefined {
+export async function syncOnce(cfg: Config, state: State, opts: SyncOptions): Promise<State | undefined> {
   const liveBase = Object.values(state.base).filter((i) => !i.deleted).length;
+  const todo = opts.todo ?? fileTodoIO(cfg.todoFile);
 
   // Markdown
   let mdSrc: string;
   let mdTime: number;
-  if (fs.existsSync(cfg.todoFile)) {
-    mdSrc = fs.readFileSync(cfg.todoFile, "utf8");
-    mdTime = Math.floor(fs.statSync(cfg.todoFile).mtimeMs / 1000);
+  const existing = await todo.read();
+  if (existing) {
+    mdSrc = existing.text;
+    mdTime = existing.mtime;
   } else if (liveBase === 0) {
     mdSrc = NEW_FILE;
     mdTime = now();
-    opts.log(`Creating ${cfg.todoFile}`);
+    opts.log(`Creating ${todo.name}`);
   } else {
-    opts.warn(`Markdown file not found: ${cfg.todoFile} — skipping so nothing gets deleted.`);
+    opts.warn(`Markdown file not found: ${todo.name} — skipping so nothing gets deleted.`);
     return undefined;
   }
   const doc = parseMarkdown(mdSrc);
@@ -170,8 +207,8 @@ export function syncOnce(cfg: Config, state: State, opts: SyncOptions): State | 
 
   // Write markdown
   const newMd = renderMarkdown(doc, result.items);
-  if (newMd !== mdSrc || !fs.existsSync(cfg.todoFile)) {
-    if (!opts.dryRun) writeAtomic(cfg.todoFile, newMd);
+  if (newMd !== mdSrc || !existing) {
+    if (!opts.dryRun) await todo.write(newMd, existing?.text);
   }
 
   // Write Inbox.lua (only when the content changed)

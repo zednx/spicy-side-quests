@@ -1,0 +1,10 @@
+{
+  "id": "spicy-side-quests",
+  "name": "Spicy Side Quests",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Sync a todo note with the Spicy Side Quests addon for World of Warcraft: Forever. Add side quests here, tick them off in game.",
+  "author": "zednx",
+  "authorUrl": "https://github.com/zednx",
+  "isDesktopOnly": true
+}

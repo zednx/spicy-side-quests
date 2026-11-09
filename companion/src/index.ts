@@ -78,8 +78,8 @@ console.log(`  saved:    ${sv ?? "(not found yet — log in once with the addon 
 let state: State = readState(stateFile);
 const opts = { dryRun: flag("--dry-run"), force: flag("--force"), log, warn };
 
-function pass() {
-  const next = syncOnce(config, state, opts);
+async function pass() {
+  const next = await syncOnce(config, state, opts);
   if (next) {
     state = next;
     if (!opts.dryRun) fs.writeFileSync(stateFile, JSON.stringify(state, null, 2));
@@ -103,11 +103,14 @@ function signature(): string {
 
 let lastSig = "";
 let lastError = "";
-function tick() {
+let busy = false;
+async function tick() {
+  if (busy) return; // a slow pass never overlaps the next tick
   const sig = signature();
   if (sig === lastSig) return;
+  busy = true;
   try {
-    pass();
+    await pass();
     lastSig = signature(); // include our own writes
     lastError = "";
   } catch (e) {
@@ -115,14 +118,16 @@ function tick() {
     if (msg !== lastError) warn(`Sync failed (will retry): ${msg}`);
     lastError = msg;
     lastSig = sig;
+  } finally {
+    busy = false;
   }
 }
 
 if (flag("--once")) {
-  pass();
+  await pass();
   log("Done.");
 } else {
-  tick();
+  await tick();
   log(`Watching for changes every ${config.pollSeconds}s. Press Ctrl+C to stop.`);
   setInterval(tick, config.pollSeconds * 1000);
 }
