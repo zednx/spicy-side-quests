@@ -4,7 +4,7 @@
 
 **Your own side quests for WoW Forever.** A lightweight in-game todo list: jot down the things *you* want to do, sorted by category, tagged, and pinned to the map.
 
-Works entirely in-game. If you like keeping notes outside the game, an **optional** sync script keeps the list in a markdown file, so you can plan your next session from your phone or desktop.
+Works entirely in-game. If you like keeping notes outside the game, **optional** syncing keeps the list in a markdown file (an Obsidian plugin, or a small script), so you can plan your next session from your phone or desktop.
 
 ## Features
 
@@ -51,50 +51,96 @@ Loot chest @52.1, 41.3
 
 Keep the addon and a markdown file in step, so you can add or tick off side quests when you're not playing. I use an [Obsidian](https://obsidian.md) note synced to my phone, but **any `.md` file works**.
 
-There are two ways to sync. Both behave the same:
-
-| | For | Install |
-|---|---|---|
-| **Obsidian plugin** (recommended) | Obsidian on desktop | Inside Obsidian, so nothing for Windows to block |
-| **Sync script** | Any `.md` file, any editor | Download and run (see below) |
-
 ```markdown
 ## Professions
 - [ ] Farm Arcanite #farming [zone:: Winterspring] [xy:: 63.2, 45.1] ^a1b2c3
 - [x] Unlock Tanaris flight path #travel ^d4e5f6
 ```
 
-### How it works
+- **Two-way:** changes sync every time you `/reload` or log out in game. If the same side quest changed on both sides, the newest change wins.
+- **Leaves your notes alone:** only todo lines are rewritten. Frontmatter, other text, sub-tasks and code blocks stay as they are.
+- **Safe:** if the file goes missing or suddenly has no todos, the sync is skipped rather than deleting anything.
 
-Addons can't access files or the internet, so syncing happens outside the game: in the Obsidian plugin, or in a script running in a terminal window that shows each change as it happens. Either way, it only reads and writes this addon's own files and your chosen markdown file.
+Pick **one** way to sync (they behave the same; don't run both at once):
 
-- **Two-way:** changes sync every time you `/reload` or log out. If the same side quest changed on both sides, the newest change wins.
-- **Leaves your notes alone:** it only rewrites todo lines. Frontmatter, other text, sub-tasks and code blocks stay as they are.
-- **Safe:** if the file goes missing or suddenly has no todos, it skips the sync rather than deleting anything.
+| | For | |
+|---|---|---|
+| **[Obsidian plugin](#obsidian-plugin)** (recommended) | Obsidian on desktop | Installs inside Obsidian; nothing for Windows to block |
+| **[Sync script](#sync-script)** | Any `.md` file, any editor | A script you run in a terminal window |
 
 ### Obsidian plugin
 
-1. In Obsidian, install the **BRAT** community plugin (it installs plugins straight from GitHub).
-2. Run **BRAT: Add a beta plugin** and enter `zednx/spicy-side-quests`.
-3. Enable **Spicy Side Quests** under Settings → Community plugins.
-4. In its settings:
-   - Pick your note (it's created if it doesn't exist).
-   - Click **Find** to locate your WoW Forever folder, or paste the path in.
+Syncs a note in your vault while Obsidian is open. Desktop only.
 
-That's it. It syncs while Obsidian is open, whenever you edit the note or `/reload` in game. 🌶 in the status bar shows the last sync; click it to sync now.
+<details>
+<summary><b>Install and set up</b></summary>
 
-Desktop only: phones can't reach the WoW folder. Edits made on your phone sync once your desktop Obsidian has them.
+1. In Obsidian, go to **Settings → Community plugins → Browse**, install **BRAT** and enable it. BRAT installs plugins straight from GitHub.
+2. Open the command palette (`Ctrl/Cmd+P`), run **BRAT: Add a beta plugin**, and enter `zednx/spicy-side-quests`.
+3. Enable **Spicy Side Quests** under **Settings → Community plugins**.
+4. Open its settings:
+   - **Side quests note:** pick a note, or type a new name and it's created on the first sync.
+   - **WoW Forever folder:** click **Find**, or paste the path, e.g. `C:\Program Files (x86)\World of Warcraft\_forever_`. It should say **✓ Addon found**.
+   - **WoW account:** only shown if you have more than one. *Auto* picks the one you played last.
 
-### Sync script setup
+Your in-game side quests appear in the note within a few seconds.
 
-1. Download `SpicySideQuests-Companion-vX.Y.Z.zip` from [Releases](https://github.com/zednx/spicy-side-quests/releases) and extract it anywhere.
+</details>
+
+<details>
+<summary><b>Using it</b></summary>
+
+- **When it syncs:** a moment after you edit the note, and whenever the game saves (on `/reload` or logout). New side quests from the note show up in game after your next `/reload`.
+- **🌶 in the status bar** shows the last sync time. Click it to sync now.
+- **Commands** (`Ctrl/Cmd+P`): *Sync now* and *Open side quests note*. The 🔥 ribbon button also opens the note.
+- **Rename or move the note freely:** the plugin follows it.
+- **On your phone:** edit the note as usual (e.g. with [Obsidian Git](https://github.com/Vinzent03/obsidian-git) or Obsidian Sync). It syncs to the game once your desktop Obsidian has the changes.
+- **Recent activity** in the plugin settings lists what changed and when.
+
+</details>
+
+<details>
+<summary><b>Switching from the sync script</b></summary>
+
+1. Close the script's window, so only one thing syncs.
+2. Set up the plugin with the same note.
+
+The first sync merges what's in the game with what's in the note. Nothing is deleted.
+
+</details>
+
+<details>
+<summary><b>Install without BRAT</b></summary>
+
+1. Download `main.js`, `manifest.json` and `styles.css` from the latest **Obsidian plugin** release on the [Releases](https://github.com/zednx/spicy-side-quests/releases) page.
+2. Put them in `<your vault>/.obsidian/plugins/spicy-side-quests/`.
+3. Restart Obsidian and enable the plugin.
+
+BRAT is easier for updates: it checks for new versions for you.
+
+</details>
+
+### Sync script
+
+For any markdown file and any editor. Runs in a terminal window that shows each change as it happens.
+
+<details>
+<summary><b>Set up</b></summary>
+
+1. Download `SpicySideQuests-Companion-vX.Y.Z.zip` from [Releases](https://github.com/zednx/spicy-side-quests/releases). On Windows, **unblock it first**: right-click → **Properties** → tick **Unblock** → **OK**. Then extract it anywhere.
 2. Start it:
    - **Windows:** double-click `start-powershell.cmd`. Nothing to install; it uses the PowerShell built into Windows 10/11.
    - **Linux/macOS:** run `./start.sh`. It needs [Node.js](https://nodejs.org) 22.18 or newer.
-3. The first time, it walks you through picking your markdown file, your WoW Forever folder (e.g. `C:\Program Files (x86)\World of Warcraft\_forever_`) and, if you have several, your WoW account.
+3. The first time, it walks you through picking:
+   - your markdown file
+   - your WoW Forever folder (e.g. `C:\Program Files (x86)\World of Warcraft\_forever_`)
+   - your WoW account, if you have several
 4. Leave it running while you play.
 
-### Changing paths later
+</details>
+
+<details>
+<summary><b>Changing paths later</b></summary>
 
 Moved your vault, reinstalled WoW or want a different file? Run **`setup-powershell.cmd`** (Windows), or `./setup.sh` (Linux/macOS). Press Enter to keep any value as it is.
 
@@ -104,21 +150,17 @@ Pointing it at a different markdown file is safe. The first sync merges what's i
 
 Settings are saved in `%APPDATA%\SpicySideQuests` on Windows, or `~/.config/spicysidequests` elsewhere.
 
-### Markdown format
+</details>
 
-- `## Headings` are categories.
-- `#tags` are normal tags.
-- `[zone:: ]` and `[xy:: ]` are optional locations. They're [Dataview](https://blacksmithgames.github.io/obsidian-dataview/)-style fields, so you can query them in Obsidian.
-- `^a1b2c3` is an ID the script adds to each line. Leave it alone.
-
-### Blocked by Windows?
+<details>
+<summary><b>Blocked by Windows?</b></summary>
 
 The scripts aren't code-signed yet, so Windows may block them because they were downloaded from the internet. Please **don't turn off Smart App Control** to get around this: once it's off, Windows 11 can't turn it back on without a reinstall.
 
 | You see | Fix |
 |---|---|
 | **"Windows protected your PC"** | Click **More info → Run anyway**, or unblock the zip (below). |
-| **"Smart App Control blocked…"** | Unblock the zip **before** extracting it (below). If it's still blocked, use the Node option or a git clone (below). |
+| **"Smart App Control blocked…"** | Unblock the zip **before** extracting it (below). If it's still blocked, see the options below. |
 | **"…running scripts is disabled on this system"** | Unblock the zip (below). On a work PC, a policy may prevent scripts entirely. |
 
 **Unblock the zip:** delete any folder you already extracted. Right-click `SpicySideQuests-Companion-vX.Y.Z.zip` → **Properties** → tick **Unblock** → **OK**. Then extract it again.
@@ -134,7 +176,23 @@ Get-ChildItem -Recurse | Unblock-File
 - **Node option:** install [Node.js](https://nodejs.org) (signed and trusted by Windows). Open a terminal in the companion folder and run `node src\index.ts --setup`, then `node src\index.ts` from then on. Run it from a terminal; the `.cmd` launchers may still be blocked.
 - **Git clone:** files from `git clone` aren't marked as downloaded. Run `companion\setup-powershell.cmd` from a clone of this repo.
 
-Using Obsidian? The [Obsidian plugin](#obsidian-plugin) avoids all of this. Signed scripts are on the way.
+Signed scripts are on the way.
+
+</details>
+
+### Markdown format
+
+<details>
+<summary><b>How todos are written in the file</b></summary>
+
+- `## Headings` are categories. Todos above the first heading go to **General**.
+- `#tags` are normal tags.
+- `[zone:: ]` and `[xy:: ]` are optional locations. They're [Dataview](https://blacksmithgames.github.io/obsidian-dataview/)-style fields, so you can query them in Obsidian.
+- `^a1b2c3` is an ID added to each line so the sync can track it. Leave it alone.
+- `- [x]` (or any mark, like `- [-]`) counts as done.
+- Indented sub-tasks, code blocks and lines longer than 1000 characters are left alone.
+
+</details>
 
 ## Security
 

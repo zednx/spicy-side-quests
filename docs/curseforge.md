@@ -83,7 +83,7 @@ Loot chest @52.1, 41.3
 
 ## Optional: sync with Obsidian / markdown
 
-Want to add side quests when you're not playing? The companion script keeps a markdown file and the addon in sync:
+Want to add side quests when you're not playing? Keep the addon in sync with a markdown file:
 
 ```markdown
 ## Professions
@@ -91,14 +91,16 @@ Want to add side quests when you're not playing? The companion script keeps a ma
 - [x] Unlock Tanaris flight path #travel ^d4e5f6
 ```
 
-- **Nothing to install on Windows**: it runs on the PowerShell built into Windows 10/11. There's also a Node.js version for Linux and macOS.
-- **Readable**: plain source code you can inspect, running in a terminal window that shows every change it makes.
-- **Two-way**: changes sync every time you `/reload` or log out.
-- **Leaves your notes alone**: it only touches todo lines, never your other notes.
+- **Obsidian plugin** (recommended for Obsidian users): installs inside Obsidian on desktop, with a settings page to pick your note and WoW folder. Nothing to download or run.
+- **Sync script**, for any markdown file: uses the PowerShell built into Windows 10/11 (nothing to install), or Node.js on Linux and macOS. It's plain, readable source code running in a terminal window that shows every change.
 
-Addons can't access files or the internet, so the companion runs outside the game. It only reads and writes this addon's own files.
+Either way:
+- **Two-way:** changes sync every time you `/reload` or log out.
+- **Leaves your notes alone:** only todo lines are touched, never your other notes.
 
-**Download and instructions:** see the GitHub page linked on this project.
+Addons can't access files or the internet, so syncing runs outside the game, and only reads and writes this addon's own files and your chosen note.
+
+**Setup instructions:** see the GitHub page linked on this project.
 
 ## Feedback
 
