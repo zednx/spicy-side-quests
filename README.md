@@ -91,6 +91,30 @@ Settings are saved in `%APPDATA%\SpicySideQuests` on Windows, or `~/.config/spic
 - `[zone:: ]` and `[xy:: ]` are optional locations. They're [Dataview](https://blacksmithgames.github.io/obsidian-dataview/)-style fields, so you can query them in Obsidian.
 - `^a1b2c3` is an ID the script adds to each line. Leave it alone.
 
+### Blocked by Windows?
+
+The scripts aren't code-signed yet, so Windows may block them because they were downloaded from the internet. Please **don't turn off Smart App Control** to get around this: once it's off, Windows 11 can't turn it back on without a reinstall.
+
+| You see | Fix |
+|---|---|
+| **"Windows protected your PC"** | Click **More info → Run anyway**, or unblock the zip (below). |
+| **"Smart App Control blocked…"** | Unblock the zip **before** extracting it (below). If it's still blocked, use the Node option or a git clone (below). |
+| **"…running scripts is disabled on this system"** | Unblock the zip (below). On a work PC, a policy may prevent scripts entirely. |
+
+**Unblock the zip:** delete any folder you already extracted. Right-click `SpicySideQuests-Companion-vX.Y.Z.zip` → **Properties** → tick **Unblock** → **OK**. Then extract it again.
+
+Already extracted? Run this in PowerShell inside the extracted folder:
+
+```powershell
+Get-ChildItem -Recurse | Unblock-File
+```
+
+**Still blocked by Smart App Control?** Use one of these:
+- **Node option:** install [Node.js](https://nodejs.org) (signed and trusted by Windows). Open a terminal in the companion folder and run `node src\index.ts --setup`, then `node src\index.ts` from then on. Run it from a terminal; the `.cmd` launchers may still be blocked.
+- **Git clone:** files from `git clone` aren't marked as downloaded. Run `companion\setup-powershell.cmd` from a clone of this repo.
+
+An Obsidian plugin (no scripts at all) and signed scripts are on the way.
+
 ## Security
 
 The addon has no network access and only touches its own data. The optional scripts never connect to the internet and only touch the files listed in [SECURITY.md](SECURITY.md).
