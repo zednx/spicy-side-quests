@@ -22,9 +22,11 @@ interface Settings {
   wowPath: string;
   account: string;
   pollSeconds: number;
+  /** Automatic syncs wait until the note hasn't been typed in for this long. */
+  idleSeconds: number;
 }
 
-const DEFAULTS: Settings = { todoFile: "", wowPath: "", account: "auto", pollSeconds: 3 };
+const DEFAULTS: Settings = { todoFile: "", wowPath: "", account: "auto", pollSeconds: 3, idleSeconds: 30 };
 const MAX_LOG = 20;
 
 export default class SpicySideQuestsPlugin extends Plugin {
@@ -38,6 +40,10 @@ export default class SpicySideQuestsPlugin extends Plugin {
   private lastWarning = "";
   private debounce: number | undefined;
   private timer: number | undefined;
+  /** When you last typed in the note (ms), and whether a sync is waiting for you to stop. */
+  lastEdit = 0;
+  pending = false;
+  private ownWriteAt = 0;
   onActivity: (() => void) | undefined;
 
   async onload() {
@@ -56,8 +62,28 @@ export default class SpicySideQuestsPlugin extends Plugin {
     this.addCommand({ id: "open-note", name: "Open side quests note", callback: () => void this.openNote() });
     this.addRibbonIcon("flame", "Open side quests note", () => void this.openNote());
 
-    // Note edited in Obsidian -> sync shortly after you stop typing.
-    this.registerEvent(this.app.vault.on("modify", (f) => f.path === this.settings.todoFile && this.schedule()));
+    // Typing in the note: wait until you've stopped before syncing, so half-written
+    // side quests aren't sent to the game (or given an ^id) mid-sentence.
+    this.registerEvent(
+      this.app.workspace.on("editor-change", (_editor, info) => {
+        if (info.file?.path === this.settings.todoFile) this.markEdited();
+      }),
+    );
+    // Changed some other way (e.g. Obsidian Git pulled it): sync soon. Our own writes don't count.
+    this.registerEvent(
+      this.app.vault.on("modify", (f) => {
+        if (f.path !== this.settings.todoFile || Date.now() - this.ownWriteAt < 2000) return;
+        this.pending = true;
+        this.schedule(2000);
+      }),
+    );
+    // Leaving the note, or switching to another app (like WoW): sync straight away.
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", () => {
+        if (this.app.workspace.getActiveFile()?.path !== this.settings.todoFile) this.flush();
+      }),
+    );
+    this.registerDomEvent(window, "blur", () => this.flush());
     // Note renamed or moved -> follow it.
     this.registerEvent(
       this.app.vault.on("rename", (f, old) => {
@@ -134,9 +160,31 @@ export default class SpicySideQuestsPlugin extends Plugin {
     if (sig && sig !== this.lastSig) void this.sync(false);
   }
 
-  private schedule() {
+  private idleMs() {
+    return Math.max(1, this.settings.idleSeconds) * 1000;
+  }
+
+  /** True while you're typing in the note (within the "wait after typing" time). */
+  isTyping() {
+    return Date.now() - this.lastEdit < this.idleMs();
+  }
+
+  markEdited() {
+    this.lastEdit = Date.now();
+    this.pending = true;
+    this.schedule(this.idleMs());
+  }
+
+  /** Sync now if something is waiting (you left the note or switched apps). */
+  flush() {
+    if (!this.pending) return;
+    this.lastEdit = 0;
+    void this.sync(false);
+  }
+
+  private schedule(ms: number) {
     if (this.debounce) window.clearTimeout(this.debounce);
-    this.debounce = window.setTimeout(() => void this.sync(false), 1500);
+    this.debounce = window.setTimeout(() => void this.sync(false), ms);
   }
 
   private setStatus(text: string) {
@@ -173,8 +221,16 @@ export default class SpicySideQuestsPlugin extends Plugin {
         return f instanceof TFile ? f : null;
       },
       read: (f) => v.read(f as TFile),
-      process: (f, fn) => v.process(f as TFile, fn),
-      create: (p, d) => v.create(p, d),
+      process: async (f, fn) => {
+        const out = await v.process(f as TFile, fn);
+        this.ownWriteAt = Date.now();
+        return out;
+      },
+      create: async (p, d) => {
+        const out = await v.create(p, d);
+        this.ownWriteAt = Date.now();
+        return out;
+      },
       createFolder: (p) => v.createFolder(p),
       exists: (p) => v.adapter.exists(p),
     };
@@ -186,6 +242,13 @@ export default class SpicySideQuestsPlugin extends Plugin {
     if (problem) {
       this.setStatus(problem);
       if (manual) new Notice(`Spicy Side Quests: ${problem}.`);
+      return;
+    }
+    // Automatic syncs wait until you've stopped typing; "Sync now" doesn't.
+    if (!manual && this.isTyping()) {
+      this.pending = true;
+      this.setStatus("Waiting for you to stop typing…");
+      this.schedule(this.lastEdit + this.idleMs() - Date.now() + 50);
       return;
     }
     if (this.busy) {
@@ -206,6 +269,7 @@ export default class SpicySideQuestsPlugin extends Plugin {
       });
       this.lastSig = sigBefore;
       if (next) {
+        this.pending = false;
         this.state = next;
         await this.save();
         this.setStatus(`Synced ${new Date().toTimeString().slice(0, 5)}`);
@@ -217,7 +281,7 @@ export default class SpicySideQuestsPlugin extends Plugin {
       }
     } catch (e) {
       if (e instanceof ChangedWhileSyncing) {
-        this.schedule(); // you were typing; try again shortly
+        this.markEdited(); // you were typing; try again once you stop
       } else {
         const msg = e instanceof Error ? e.message : String(e);
         this.setStatus("Sync failed (see settings)");
@@ -227,7 +291,7 @@ export default class SpicySideQuestsPlugin extends Plugin {
       this.busy = false;
       if (this.again) {
         this.again = false;
-        this.schedule();
+        this.schedule(500);
       }
     }
   }
@@ -350,6 +414,21 @@ class SettingsTab extends PluginSettingTab {
             s.pollSeconds = v;
             await this.plugin.save();
             this.plugin.restartTimer();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("Wait after typing")
+      .setDesc(
+        `${s.idleSeconds} seconds. Syncs once you've stopped typing in the note for this long, or straight away when you switch to another note or app (like WoW).`,
+      )
+      .addSlider((sl) =>
+        sl
+          .setLimits(5, 120, 5)
+          .setValue(s.idleSeconds)
+          .onChange(async (v) => {
+            s.idleSeconds = v;
+            await this.plugin.save();
           }),
       );
 

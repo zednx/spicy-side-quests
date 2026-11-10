@@ -1,5 +1,11 @@
 # Changelog
 
+## Obsidian plugin 0.1.1
+
+- Fix: the plugin no longer syncs while you're typing in the note. It used to add `^id`s to half-written lines and send them to the game mid-sentence.
+- It now waits until you've stopped typing for **30 seconds**, or syncs straight away when you switch to another note or app (like WoW). Change the wait under **Wait after typing** in the plugin settings.
+- **Sync now** (status bar or command) still syncs immediately.
+
 ## v0.2.0
 
 ### Addon

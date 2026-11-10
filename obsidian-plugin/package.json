@@ -1,6 +1,6 @@
 {
   "name": "obsidian-spicy-side-quests",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Obsidian plugin: sync a note with the Spicy Side Quests WoW addon.",
   "license": "MIT",

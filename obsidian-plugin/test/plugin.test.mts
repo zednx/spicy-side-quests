@@ -90,7 +90,12 @@ function fakeObsidian(vault: FakeVault) {
       adapter: { exists: (p: string) => vault.exists(p) },
       getMarkdownFiles: () => [],
     },
-    workspace: { onLayoutReady: () => {}, getLeaf: () => ({ openFile: async () => {} }) },
+    workspace: {
+      onLayoutReady: () => {},
+      getLeaf: () => ({ openFile: async () => {} }),
+      on: (name: string, fn: (...a: unknown[]) => void) => ((handlers["ws:" + name] ??= []).push(fn), {}),
+      getActiveFile: () => null,
+    },
   };
   let stored: unknown = null;
   class Plugin {
@@ -126,8 +131,11 @@ function fakeObsidian(vault: FakeVault) {
     },
     normalizePath: (p: string) => p.replace(/\\/g, "/").replace(/\/+/g, "/"),
   };
-  return { mod, app, notices, getStored: () => stored };
+  return { mod, app, notices, handlers, getStored: () => stored };
 }
+
+// The plugin uses window.setTimeout etc.; Node has them on globalThis.
+(globalThis as unknown as { window: typeof globalThis }).window = globalThis;
 
 test("built plugin: syncs the game and a vault note end to end", async () => {
   const main = path.join(import.meta.dirname, "..", "main.js");
@@ -160,7 +168,12 @@ test("built plugin: syncs the game and a vault note end to end", async () => {
   };
   let Plugin: new () => {
     onload(): Promise<void>;
+    onunload(): void;
     sync(manual: boolean): Promise<void>;
+    markEdited(): void;
+    flush(): void;
+    isTyping(): boolean;
+    pending: boolean;
     setTodoFile(p: string): Promise<void>;
     settings: { todoFile: string; wowPath: string };
     save(): Promise<void>;
@@ -196,6 +209,29 @@ test("built plugin: syncs the game and a vault note end to end", async () => {
   assert.equal(stored.settings.todoFile, "Games/Side Quests.md");
   assert.equal(Object.keys(stored.state.base).length, 2);
   assert.ok(fake.notices.some((n) => n.includes("markdown → game: added \"From Obsidian\"")), fake.notices.join(" | "));
+
+  // While you're typing, automatic syncs wait: a half-written line gets no ^id and isn't sent.
+  const before = vault.files.get("Games/Side Quests.md")!.text;
+  const typing = before.replace("## Quests", "## Quests\n- [ ] Half writ");
+  vault.files.set("Games/Side Quests.md", { text: typing, mtime: Date.now() + 10000 });
+  plugin.markEdited();
+  assert.ok(plugin.isTyping());
+  await plugin.sync(false); // e.g. the game saved meanwhile
+  assert.equal(vault.files.get("Games/Side Quests.md")!.text, typing, "no write while typing");
+  assert.ok(plugin.pending);
+
+  // Leaving the note (or switching to WoW) syncs straight away.
+  plugin.flush();
+  await new Promise((r) => setTimeout(r, 100));
+  assert.match(vault.files.get("Games/Side Quests.md")!.text, /- \[ \] Half writ \^\w+/);
+  assert.equal(plugin.pending, false);
+
+  // "Sync now" doesn't wait.
+  plugin.markEdited();
+  vault.files.set("Games/Side Quests.md", { text: vault.files.get("Games/Side Quests.md")!.text.replace("Half writ", "Half written"), mtime: Date.now() + 20000 });
+  await plugin.sync(true);
+  assert.match(vault.files.get("Games/Side Quests.md")!.text, /Half written \^\w+/);
+  plugin.onunload(); // clears the pending timer
 
   fs.rmSync(dir, { recursive: true, force: true });
 });

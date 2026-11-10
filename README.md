@@ -99,7 +99,7 @@ Your in-game side quests appear in the note within a few seconds.
 <details>
 <summary><b>Using it</b></summary>
 
-- **When it syncs:** a moment after you edit the note, and whenever the game saves (on `/reload` or logout). New side quests from the note show up in game after your next `/reload`.
+- **When it syncs:** once you've stopped typing in the note for 30 seconds (adjustable under **Wait after typing**), straight away when you switch to another note or app (like WoW), and whenever the game saves (on `/reload` or logout). New side quests from the note show up in game after your next `/reload`.
 - **🌶 in the status bar** shows the last sync time. Click it to sync now.
 - **Commands** (`Ctrl/Cmd+P`): *Sync now* and *Open side quests note*. The 🔥 ribbon button also opens the note.
 - **Rename or move the note freely:** the plugin follows it.
