@@ -199,7 +199,7 @@ test("full sync against a fake WoW folder", async () => {
 });
 
 test("readGame tolerates a missing file", () => {
-  assert.deepEqual(readGame(undefined).items, {});
+  assert.deepEqual(Object.keys(readGame(undefined).items), []);
 });
 
 // --- Security regressions ----------------------------------------------------

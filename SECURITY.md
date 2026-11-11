@@ -17,6 +17,8 @@ They make no network connections, run no other programs and never execute anythi
 
 **Obsidian plugin** (optional, desktop only) uses the same sync engine as the scripts. It touches the same game files, plus your chosen note, which it edits through Obsidian's vault API. It keeps its settings and sync history in its own plugin data. It never overwrites edits you make while a sync is running; it retries instead.
 
+**Desktop app** (optional, Windows) uses the same sync engine and touches the same files as the scripts, sharing their settings folder. Its window can only call five file commands (read, write, file info, list a folder, and where your settings live) plus the open/save file pickers. Its content security policy blocks network requests and inline scripts, and all text is shown as text, never as HTML.
+
 ## Safeguards
 
 - Text from markdown is escaped before it goes into `Inbox.lua`, so a todo can't inject code into the game. Tests round-trip hostile strings through a real Lua interpreter.
@@ -26,7 +28,7 @@ They make no network connections, run no other programs and never execute anythi
 - Very long lines and deeply nested data are skipped or rejected, so they can't hang the parsers.
 - Files are written through a temp file with a random, exclusive name, then swapped in.
 - The scripts skip a sync rather than delete everything if your markdown file goes missing or is emptied.
-- Release zips are built by GitHub Actions with build attestations. Verify one with `gh attestation verify <zip> --repo zednx/spicy-side-quests`.
+- Release zips and the desktop `.exe` are built by GitHub Actions with build attestations. Verify one with `gh attestation verify <zip> --repo zednx/spicy-side-quests`.
 
 ## Code signing
 

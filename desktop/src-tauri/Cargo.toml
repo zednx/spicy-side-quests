@@ -1,0 +1,24 @@
+[package]
+name = "spicy-side-quests"
+version = "0.3.0"
+description = "Spicy Side Quests: sync a markdown file with the WoW Forever addon"
+license = "MIT"
+repository = "https://github.com/zednx/spicy-side-quests"
+edition = "2021"
+rust-version = "1.90"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.4", features = [] }
+
+[dependencies]
+tauri = { version = "=2.12.5", features = [] }
+tauri-plugin-dialog = "=2.8.3"
+serde = { version = "=1.0.229", features = ["derive"] }
+dirs = "=7.0.0"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

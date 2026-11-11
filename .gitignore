@@ -2,3 +2,7 @@ node_modules/
 dist/
 package-lock.json
 obsidian-plugin/main.js
+
+# Desktop app build output
+desktop/src-tauri/target/
+desktop/src-tauri/gen/

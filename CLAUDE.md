@@ -9,6 +9,7 @@ A WoW Forever addon (in-game side quest/todo list) with optional markdown sync, 
 | `SpicySideQuests/` | The addon (Lua). Interface 16001. Only this folder ships to CurseForge. |
 | `companion/src/` | Sync engine + Node CLI (TypeScript, no runtime deps, runs with `node src/index.ts`). |
 | `companion/powershell/` | PowerShell edition of the CLI: must behave the same as the Node one and share config/state files. |
+| `desktop/` | Windows desktop app (Tauri 2: Rust file commands in `src-tauri/`, web UI in `src/` bundled with esbuild). Uses the engine through the `Fsys` interface in `companion/src/engine.ts`. |
 | `obsidian-plugin/` | Obsidian plugin. Bundles the engine from `companion/src` with esbuild. Its manifest is `manifest.json` at the repo root. |
 | `scripts/` | `bump-version.sh`, `check-version.sh`, `check-release.sh`, `curseforge-upload.sh`. |
 
@@ -18,8 +19,11 @@ A WoW Forever addon (in-game side quest/todo list) with optional markdown sync, 
 lua5.1 tests/run.lua                                   # addon
 cd companion && npm test && npx tsc --noEmit -p .      # engine + Node CLI
 cd obsidian-plugin && npm run build && npm test        # plugin (typecheck: npm run typecheck)
+cd desktop && npm test && npm run typecheck              # desktop app (UI smoke: node build.mjs && node test/ui-smoke.mjs)
 pwsh companion/powershell/test.ps1                     # PowerShell (CI also runs it on Windows PowerShell 5.1)
 ```
+
+`companion/src/engine.ts` must stay free of Node imports (the desktop app runs it in a web view).
 
 A change to the sync behaviour must land in **both** the Node engine and the PowerShell edition, with tests in both.
 

@@ -75,6 +75,7 @@ Pick **one** way to sync (they behave the same; don't run both at once):
 | | For | |
 |---|---|---|
 | **[Obsidian plugin](#obsidian-plugin)** (recommended) | Obsidian on desktop | Installs inside Obsidian; nothing for Windows to block |
+| **[Desktop app](#desktop-app)** | Windows, any `.md` file | A small app with a window to view and edit your side quests |
 | **[Sync script](#sync-script)** | Any `.md` file, any editor | A script you run in a terminal window |
 
 ### Obsidian plugin
@@ -126,6 +127,34 @@ The first sync merges what's in the game with what's in the note. Nothing is del
 3. Restart Obsidian and enable the plugin.
 
 BRAT is easier for updates: it checks for new versions for you.
+
+</details>
+
+### Desktop app
+
+A small Windows app that syncs while it's open, and lets you add, tick and edit side quests (or the whole markdown file) without another editor. Windows 10/11.
+
+<details>
+<summary><b>Set up</b></summary>
+
+1. Download `SpicySideQuests-vX.Y.Z.exe` from [Releases](https://github.com/zednx/spicy-side-quests/releases) and put it anywhere (e.g. your Desktop). There's no installer.
+2. Run it. If Windows shows **"Windows protected your PC"**, click **More info → Run anyway** (the app isn't code-signed yet).
+3. In **Settings**:
+   - **Markdown file:** **Browse…** for an existing file, or **New file…** to create one.
+   - **WoW Forever folder:** click **Find**, or **Browse…** to it. It should say **✓ Addon found**.
+   - **WoW account:** *Auto* picks the one you played last.
+
+</details>
+
+<details>
+<summary><b>Using it</b></summary>
+
+- **Side quests tab:** add one at the top (category + text, `#tags` work), tick boxes to complete, click the text to rename, ✕ to delete.
+- **Markdown tab:** edit the whole file. Syncing pauses while there are unsaved changes; **Save** or `Ctrl+S` saves and syncs.
+- **Sync now** syncs straight away; otherwise it checks for changes every few seconds. New side quests show up in game after your next `/reload`.
+- **Activity tab:** what changed and when.
+- It shares its settings with the sync script, so you can switch between them (just don't run both at once).
+- It never goes online. It only touches your markdown file and the addon's files in the WoW folder.
 
 </details>
 

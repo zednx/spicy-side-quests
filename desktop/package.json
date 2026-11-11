@@ -1,0 +1,25 @@
+{
+  "name": "spicy-side-quests-desktop",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Spicy Side Quests desktop app (Tauri)",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build:web": "node build.mjs",
+    "build": "tauri build --no-bundle",
+    "dev": "tauri dev",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.4",
+    "@tauri-apps/plugin-dialog": "2.8.3"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.4",
+    "@types/node": "^22.10.0",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3"
+  }
+}

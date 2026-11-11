@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.0
+
+### Desktop app (new)
+- **Spicy Side Quests.exe**: a small Windows app that does the sync for you. An alternative to the scripts, nothing to install (uses the WebView2 that comes with Windows 10/11).
+- **Side quests** tab: add, tick, rename and delete side quests in your markdown file.
+- **Markdown** tab: edit the whole file. Syncing pauses while you have unsaved changes; **Save** (or Ctrl+S) syncs.
+- **Settings**: pick or create the markdown file, find the WoW folder, choose the account. Shares its settings with the sync scripts.
+- No network access; it only reads and writes the markdown file and the addon's files.
+
+### Companion
+- Internal: the sync engine no longer depends on Node, so the desktop app can share it. No change in behaviour.
+
 ## Obsidian plugin 0.1.1
 
 - Fix: the plugin no longer syncs while you're typing in the note. It used to add `^id`s to half-written lines and send them to the game mid-sentence.

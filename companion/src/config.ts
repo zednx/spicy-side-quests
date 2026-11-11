@@ -2,18 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-export interface Config {
-  /** Markdown file to sync, e.g. an Obsidian note. */
-  todoFile: string;
-  /** The WoW Forever client folder, e.g. C:/Program Files (x86)/World of Warcraft/_forever_ */
-  wowPath: string;
-  /** Folder name under WTF/Account, or "auto" to pick the one that has the addon's data. */
-  account: string;
-  /** How often to check the files for changes. */
-  pollSeconds: number;
-}
+import { ADDON, wowPathCandidates, type Config } from "./engine.ts";
 
-export const ADDON = "SpicySideQuests";
+export { ADDON, type Config } from "./engine.ts";
 
 export function defaultConfigDir(): string {
   if (process.platform === "win32" && process.env.APPDATA) return path.join(process.env.APPDATA, ADDON);
@@ -64,19 +55,7 @@ export function isAddonInstalled(wowPath: string) {
 
 /** Common install locations. Only returns folders that have the addon installed. */
 export function detectWowPaths(): string[] {
-  const roots: string[] = [];
-  if (process.platform === "win32") {
-    for (const drive of ["C:", "D:", "E:"]) {
-      roots.push(`${drive}\\Program Files (x86)\\World of Warcraft`, `${drive}\\Program Files\\World of Warcraft`, `${drive}\\World of Warcraft`, `${drive}\\Games\\World of Warcraft`);
-    }
-  } else {
-    const home = os.homedir();
-    for (const prefix of [path.join(home, "Games", "battlenet"), path.join(home, "Games", "battle-net"), path.join(home, ".wine")]) {
-      roots.push(path.join(prefix, "drive_c", "Program Files (x86)", "World of Warcraft"));
-    }
-  }
-  const flavours = ["_forever_", "_forever_beta_", "_classic_beta_"];
-  return roots.flatMap((r) => flavours.map((f) => path.join(r, f))).filter(isAddonInstalled);
+  return wowPathCandidates(process.platform, os.homedir(), path.join).filter(isAddonInstalled);
 }
 
 /** Account folders under WTF/Account (each has a SavedVariables folder). */

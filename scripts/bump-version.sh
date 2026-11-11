@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Bumps a version everywhere it appears and starts a CHANGELOG entry.
 #
-#   scripts/bump-version.sh addon  patch|minor|major   # WoW addon + companion scripts (tags: vX.Y.Z)
+#   scripts/bump-version.sh addon  patch|minor|major   # WoW addon + companion scripts + desktop app (tags: vX.Y.Z)
 #   scripts/bump-version.sh plugin patch|minor|major   # Obsidian plugin (tags: X.Y.Z)
 #
 # patch = bug fixes and small tweaks, minor = new features, major = breaking changes.
@@ -42,6 +42,11 @@ case "$what" in
     sed -i "s/^const VERSION = \".*\";/const VERSION = \"$new\";/" companion/src/index.ts
     sed -i "s/^  \"version\": \".*\",/  \"version\": \"$new\",/" companion/package.json
     sed -i "s/^\$script:VERSION = '.*'/\$script:VERSION = '$new'/" companion/powershell/SpicySideQuests.ps1
+    # Desktop app
+    sed -i "s/^  \"version\": \".*\",/  \"version\": \"$new\",/" desktop/package.json desktop/src-tauri/tauri.conf.json
+    sed -i "s/^const VERSION = \".*\";/const VERSION = \"$new\";/" desktop/src/main.ts
+    sed -i "0,/^version = \".*\"/s//version = \"$new\"/" desktop/src-tauri/Cargo.toml
+    sed -i "/^name = \"spicy-side-quests\"$/{n;s/^version = .*/version = \"$new\"/}" desktop/src-tauri/Cargo.lock
     changelog "v$new"
     scripts/check-version.sh "$new"
     echo "Addon $old -> $new. Fill in CHANGELOG.md, commit, then: git tag v$new && git push origin v$new"

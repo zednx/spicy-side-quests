@@ -1,7 +1,7 @@
 -- Spicy Side Quests: data model, persistence and slash commands.
 -- Works fully standalone; the companion app only feeds Inbox.lua.
 local ADDON, ns = ...
-ns.VERSION = "0.2.0"
+ns.VERSION = "0.3.0"
 ns.DEFAULT_CATEGORY = "General"
 ns.TOMBSTONE_DAYS = 30
 

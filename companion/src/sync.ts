@@ -1,88 +1,24 @@
-// One sync pass: read markdown + SavedVariables, merge, write markdown + Inbox.lua.
+// Node file access for the sync engine (used by the Node CLI and the Obsidian plugin).
+// The sync logic itself lives in engine.ts and is shared with the desktop app.
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { ADDON, addonDir, type Config } from "./config.ts";
-import { parseAssignments, toLua, type LuaValue } from "./lua.ts";
-import { cleanCategory, mdItems, parseMarkdown, renderMarkdown } from "./markdown.ts";
-import { merge } from "./merge.ts";
-import { DEFAULT_CATEGORY, dict, isValidId, now, oneLine, own, type Item } from "./types.ts";
+import {
+  ADDON,
+  fileTodoIOWith,
+  parseGame,
+  stateFromJSON,
+  syncOnceWith,
+  type Config,
+  type Fsys,
+  type GameData,
+  type State,
+  type SyncOptions,
+  type TodoIO,
+} from "./engine.ts";
+import { dict } from "./types.ts";
 
-export interface State {
-  base: Record<string, Item>;
-}
-
-/** Where the markdown file lives. The scripts use the disk; the Obsidian plugin uses the vault API. */
-export interface TodoIO {
-  /** Current text and modified time (unix seconds), or undefined if the file doesn't exist. */
-  read(): Promise<{ text: string; mtime: number } | undefined>;
-  /** Writes `text`. `expected` is what read() returned; an editor-backed implementation should
-   *  throw if the file changed since, so a sync never overwrites edits made in the meantime. */
-  write(text: string, expected?: string): Promise<void>;
-  /** Shown in messages, e.g. the file path. */
-  name: string;
-}
-
-export function fileTodoIO(file: string): TodoIO {
-  return {
-    name: file,
-    async read() {
-      if (!fs.existsSync(file)) return undefined;
-      return { text: fs.readFileSync(file, "utf8"), mtime: Math.floor(fs.statSync(file).mtimeMs / 1000) };
-    },
-    async write(text) {
-      writeAtomic(file, text);
-    },
-  };
-}
-
-export interface SyncOptions {
-  dryRun?: boolean;
-  force?: boolean;
-  log: (msg: string) => void;
-  warn: (msg: string) => void;
-  /** Defaults to the file at cfg.todoFile. */
-  todo?: TodoIO;
-}
-
-const NEW_FILE = `---
-tags: [wow, todo]
----
-
-# WoW Todo
-
-Synced with the Spicy Side Quests addon. Use \`## Headings\` for categories.
-
-## ${DEFAULT_CATEGORY}
-`;
-
-const sha = (s: string) => crypto.createHash("sha1").update(s).digest("hex");
-
-export function readState(file: string): State {
-  try {
-    return stateFromJSON(JSON.parse(fs.readFileSync(file, "utf8")));
-  } catch {
-    return { base: dict() };
-  }
-}
-
-/** Validates sync state loaded from JSON (a state file, or the Obsidian plugin's data). */
-export function stateFromJSON(s: { base?: unknown } | null | undefined): State {
-  try {
-    if (!s || typeof s !== "object") return { base: dict() };
-    const base = dict<Item>();
-    for (const [id, raw] of Object.entries((s.base ?? {}) as Record<string, Record<string, unknown>>)) {
-      if (!isValidId(id) || !raw || typeof raw !== "object" || typeof raw.text !== "string") continue;
-      // tolerate nulls (e.g. a state file written by the PowerShell edition)
-      for (const k of Object.keys(raw)) if (raw[k] === null) delete raw[k];
-      if (!Array.isArray(raw.tags)) raw.tags = [];
-      base[id] = { ...(raw as unknown as Item), id };
-    }
-    return { base };
-  } catch {
-    return { base: dict() };
-  }
-}
+export { NEW_FILE, renderInbox, stateFromJSON, type State, type SyncOptions, type TodoIO } from "./engine.ts";
 
 function writeAtomic(file: string, content: string) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -97,7 +33,50 @@ function writeAtomic(file: string, content: string) {
   }
 }
 
-/** Finds WTF/Account/<name>/SavedVariables/SpicySideQuests.lua. */
+/** The engine's file access, backed by Node's fs. */
+export const nodeFs: Fsys = {
+  async readText(p) {
+    try {
+      return fs.readFileSync(p, "utf8");
+    } catch {
+      return undefined;
+    }
+  },
+  async writeText(p, text) {
+    writeAtomic(p, text);
+  },
+  async info(p) {
+    try {
+      const st = fs.statSync(p);
+      return { mtimeMs: st.mtimeMs, size: st.size, isDir: st.isDirectory() };
+    } catch {
+      return undefined;
+    }
+  },
+  async listDir(p) {
+    try {
+      return fs.readdirSync(p);
+    } catch {
+      return [];
+    }
+  },
+  join: (...parts) => path.join(...parts),
+  dirname: (p) => path.dirname(p),
+};
+
+export function fileTodoIO(file: string): TodoIO {
+  return fileTodoIOWith(nodeFs, file);
+}
+
+export function readState(file: string): State {
+  try {
+    return stateFromJSON(JSON.parse(fs.readFileSync(file, "utf8")));
+  } catch {
+    return { base: dict() };
+  }
+}
+
+/** Finds WTF/Account/<name>/SavedVariables/SpicySideQuests.lua. Synchronous, for cheap change polling. */
 export function findSavedVariables(cfg: Config): string | undefined {
   const accRoot = path.join(cfg.wowPath, "WTF", "Account");
   const file = (acc: string) => path.join(accRoot, acc, "SavedVariables", `${ADDON}.lua`);
@@ -111,128 +90,11 @@ export function findSavedVariables(cfg: Config): string | undefined {
   return found[0];
 }
 
-const str = (v: LuaValue | undefined) => (typeof v === "string" ? v : undefined);
-const num = (v: LuaValue | undefined) => (typeof v === "number" ? v : undefined);
-
-export function readGame(svFile: string | undefined): { items: Record<string, Item>; order: string[]; categories: string[] } {
-  const empty = { items: {}, order: [], categories: [] };
-  if (!svFile || !fs.existsSync(svFile)) return empty;
-  const db = parseAssignments(fs.readFileSync(svFile, "utf8")).SpicySideQuestsDB;
-  if (!db || typeof db !== "object" || Array.isArray(db)) return empty;
-
-  const items = dict<Item>();
-  const rawItems = db.items;
-  if (rawItems && typeof rawItems === "object") {
-    for (const v of Object.values(rawItems)) {
-      if (!v || typeof v !== "object" || Array.isArray(v)) continue;
-      const id = str(v.id), text = str(v.text);
-      if (!isValidId(id) || text === undefined || own(items, id)) continue;
-      items[id] = {
-        id,
-        text: oneLine(text),
-        tags: Array.isArray(v.tags) ? v.tags.filter((t): t is string => typeof t === "string") : [],
-        category: cleanCategory(str(v.category) ?? ""),
-        done: v.done === true,
-        deleted: v.deleted === true || undefined,
-        zone: str(v.zone),
-        mapID: num(v.mapID),
-        x: num(v.x),
-        y: num(v.y),
-        created: num(v.created) ?? 0,
-        updated: num(v.updated) ?? 0,
-      };
-    }
-  }
-  const list = (v: LuaValue | undefined) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
-  return { items, order: list(db.order), categories: list(db.categories) };
+export function readGame(svFile: string | undefined): GameData {
+  return parseGame(svFile && fs.existsSync(svFile) ? fs.readFileSync(svFile, "utf8") : undefined);
 }
 
-export function renderInbox(items: Item[], categories: string[], generated: number, hash = ""): string {
-  const payload = {
-    generated,
-    categories,
-    items: items.map((i) => ({ ...i, deleted: i.deleted || undefined })),
-  };
-  return (
-    "-- Written by the Spicy Side Quests companion app. Changes here are overwritten.\n" +
-    "-- Without the companion app this file stays empty and the addon works in-game only.\n" +
-    `-- hash: ${hash}\n` +
-    `SpicySideQuests_Inbox = ${toLua(payload)}\n`
-  );
-}
-
-function newId(taken: Set<string>): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  for (;;) {
-    let id = "";
-    for (let i = 0; i < 6; i++) id += chars[crypto.randomInt(chars.length)];
-    if (!taken.has(id)) return id;
-  }
-}
-
-/** Runs one sync pass. Returns the new state, or undefined if nothing could be synced. */
-export async function syncOnce(cfg: Config, state: State, opts: SyncOptions): Promise<State | undefined> {
-  const liveBase = Object.values(state.base).filter((i) => !i.deleted).length;
-  const todo = opts.todo ?? fileTodoIO(cfg.todoFile);
-
-  // Markdown
-  let mdSrc: string;
-  let mdTime: number;
-  const existing = await todo.read();
-  if (existing) {
-    mdSrc = existing.text;
-    mdTime = existing.mtime;
-  } else if (liveBase === 0) {
-    mdSrc = NEW_FILE;
-    mdTime = now();
-    opts.log(`Creating ${todo.name}`);
-  } else {
-    opts.warn(`Markdown file not found: ${todo.name} — skipping so nothing gets deleted.`);
-    return undefined;
-  }
-  const doc = parseMarkdown(mdSrc);
-  const md = mdItems(doc);
-  if (md.length === 0 && liveBase > 0 && !opts.force) {
-    opts.warn(`The markdown file has no todos but ${liveBase} were synced before. Skipping so nothing gets deleted (use --force to accept).`);
-    return undefined;
-  }
-
-  // Game
-  const svFile = findSavedVariables(cfg);
-  const game = readGame(svFile);
-
-  // Merge
-  const result = merge({ base: state.base, md, mdTime, game: game.items, gameOrder: game.order, newId });
-  for (const line of result.log) opts.log(line);
-
-  // Write markdown
-  const newMd = renderMarkdown(doc, result.items);
-  if (newMd !== mdSrc || !existing) {
-    if (!opts.dryRun) await todo.write(newMd, existing?.text);
-  }
-
-  // Write Inbox.lua (only when the content changed)
-  const categories: string[] = [];
-  const addCat = (c: string) => {
-    if (!categories.some((x) => x.toLowerCase() === c.toLowerCase())) categories.push(c);
-  };
-  doc.lines.forEach((l) => l.kind === "heading" && result.items.some((i) => i.category.toLowerCase() === l.category.toLowerCase()) && addCat(l.category));
-  game.categories.forEach(addCat);
-  result.items.forEach((i) => addCat(i.category));
-
-  // Compared against the file itself, so an addon update that resets Inbox.lua gets rewritten.
-  const inboxHash = sha(JSON.stringify([categories, result.items]));
-  const inboxFile = path.join(addonDir(cfg.wowPath), "Inbox.lua");
-  let current = "";
-  try {
-    current = fs.readFileSync(inboxFile, "utf8");
-  } catch {}
-  if (!current.includes(`-- hash: ${inboxHash}\n`)) {
-    if (!opts.dryRun) writeAtomic(inboxFile, renderInbox(result.items, categories, now(), inboxHash));
-    if (result.log.some((l) => l.startsWith("markdown"))) opts.log("Type /reload in game to see markdown changes.");
-  }
-
-  const base = dict<Item>();
-  for (const i of result.items) base[i.id] = i;
-  return { base };
+/** Runs one sync pass against the local disk. */
+export function syncOnce(cfg: Config, state: State, opts: SyncOptions): Promise<State | undefined> {
+  return syncOnceWith(nodeFs, cfg, state, opts);
 }

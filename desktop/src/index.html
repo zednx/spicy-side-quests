@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spicy Side Quests</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <header>
+      <img src="chilli.png" alt="" class="logo" />
+      <h1>Spicy Side Quests</h1>
+      <span id="version" class="muted"></span>
+      <span class="spacer"></span>
+      <span id="status" class="status wait">Starting…</span>
+      <button id="sync" class="primary" title="Sync now">Sync now</button>
+    </header>
+    <nav class="tabs">
+      <button data-tab="quests" class="active">Side quests</button>
+      <button data-tab="markdown">Markdown</button>
+      <button data-tab="settings">Settings</button>
+      <button data-tab="activity">Activity</button>
+    </nav>
+    <main id="view"></main>
+    <script src="app.js"></script>
+  </body>
+</html>

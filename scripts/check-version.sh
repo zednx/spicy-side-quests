@@ -11,5 +11,9 @@ check SpicySideQuests/Core.lua "$(sed -n 's/^ns.VERSION = "\(.*\)"/\1/p' SpicySi
 check companion/src/index.ts "$(sed -n 's/^const VERSION = "\(.*\)";/\1/p' companion/src/index.ts)"
 check companion/package.json "$(sed -n 's/^  "version": "\(.*\)",/\1/p' companion/package.json)"
 check companion/powershell/SpicySideQuests.ps1 "$(sed -n "s/^\$script:VERSION = '\(.*\)'/\1/p" companion/powershell/SpicySideQuests.ps1)"
+check desktop/package.json "$(sed -n 's/^  "version": "\(.*\)",/\1/p' desktop/package.json)"
+check desktop/src-tauri/tauri.conf.json "$(sed -n 's/^  "version": "\(.*\)",/\1/p' desktop/src-tauri/tauri.conf.json)"
+check desktop/src-tauri/Cargo.toml "$(sed -n '0,/^version = /s/^version = "\(.*\)"/\1/p' desktop/src-tauri/Cargo.toml)"
+check desktop/src/main.ts "$(sed -n 's/^const VERSION = "\(.*\)";/\1/p' desktop/src/main.ts)"
 grep -q "^## v$want\$" CHANGELOG.md && echo "✓ CHANGELOG.md" || { echo "✗ CHANGELOG.md has no '## v$want' section"; fail=1; }
 exit $fail

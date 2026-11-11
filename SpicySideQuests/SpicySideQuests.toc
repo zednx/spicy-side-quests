@@ -2,7 +2,7 @@
 ## Title: Spicy Side Quests
 ## Notes: Your own side quests: a todo list with categories, tags and waypoints. Optional sync with a markdown file (e.g. Obsidian).
 ## Author: zednx
-## Version: 0.2.0
+## Version: 0.3.0
 ## SavedVariables: SpicySideQuestsDB
 ## IconTexture: Interface\AddOns\SpicySideQuests\Media\Chilli
 ## AddonCompartmentFunc: SpicySideQuests_OnCompartmentClick

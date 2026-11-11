@@ -1,0 +1,31 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Spicy Side Quests",
+  "version": "0.3.0",
+  "identifier": "com.zednx.spicysidequests",
+  "build": {
+    "frontendDist": "../dist",
+    "beforeBuildCommand": "node build.mjs",
+    "beforeDevCommand": "node build.mjs"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Spicy Side Quests",
+        "width": 960,
+        "height": 700,
+        "minWidth": 640,
+        "minHeight": 480
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": false,
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"]
+  }
+}

@@ -3,10 +3,11 @@ name: release
 # Push a tag like v0.1.0 to publish a GitHub Release with:
 #   SpicySideQuests-vX.Y.Z.zip            the addon (upload this one to CurseForge)
 #   SpicySideQuests-Companion-vX.Y.Z.zip  the optional sync scripts
+#   SpicySideQuests-vX.Y.Z.exe            the optional Windows desktop app
 #   SHA256SUMS.txt
 # and uploads the addon zip to CurseForge when the CF_API_KEY secret is set.
 # Every zip also gets a GitHub build attestation, so anyone can check it was
-# built here from this repo's source: gh attestation verify <zip> --repo zednx/spicy-side-quests
+# built here from this repo's source: gh attestation verify <file> --repo zednx/spicy-side-quests
 #
 # Run it manually (Actions -> release -> Run workflow) for a dry run: same
 # checks and zips, uploaded as a workflow artifact, nothing published.
@@ -22,7 +23,34 @@ permissions:
   actions: read # SignPath reads the uploaded artifact
 
 jobs:
+  desktop:
+    # The Windows desktop app, built first so the release job can attach it.
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - run: rustup toolchain install stable --profile minimal && rustup default stable
+      - run: npm install --no-save
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: desktop-exe
+          path: desktop/src-tauri/target/release/spicy-side-quests.exe
+          if-no-files-found: error
+
   release:
+    needs: desktop
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -107,17 +135,26 @@ jobs:
           echo "Signed SpicySideQuests.ps1 is in the companion zip"
       # -------------------------------------------------------------------------------
 
+      - name: Get the desktop app
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: desktop-exe
+          path: stage/desktop
+
       - name: Zip the companion
         env:
           v: ${{ steps.v.outputs.version }}
         run: |
           (cd stage && zip -rq "../dist/SpicySideQuests-Companion-v$v.zip" SpicySideQuests-Companion)
-          (cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          cp stage/desktop/spicy-side-quests.exe "dist/SpicySideQuests-v$v.exe"
+          (cd dist && sha256sum *.zip *.exe > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
-          subject-path: dist/*.zip
+          subject-path: |
+            dist/*.zip
+            dist/*.exe
 
       - name: Release notes
         env:
@@ -128,9 +165,9 @@ jobs:
 
           ---
           **Install:** download `SpicySideQuests-v*.zip`, extract it into `World of Warcraft/_forever_/Interface/AddOns/`, then restart the game.
-          **Optional sync:** download the Companion zip and see the [README](https://github.com/zednx/spicy-side-quests#optional-sync-with-a-markdown-file).
+          **Optional sync:** use the desktop app (`SpicySideQuests-v*.exe`, Windows) or the Companion zip; see the [README](https://github.com/zednx/spicy-side-quests#optional-sync-with-a-markdown-file).
 
-          These zips were built by GitHub Actions from this tag's source. To check: `gh attestation verify <zip> --repo zednx/spicy-side-quests`
+          These files were built by GitHub Actions from this tag's source. To check: `gh attestation verify <file> --repo zednx/spicy-side-quests`
           EOF
           cat notes.md
 
