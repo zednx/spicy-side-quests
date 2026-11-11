@@ -4,7 +4,7 @@
 
 **Your own side quests for WoW Forever.** A lightweight in-game todo list: jot down the things *you* want to do, sorted by category, tagged, and pinned to the map.
 
-Works entirely in-game. If you like keeping notes outside the game, **optional** syncing keeps the list in a markdown file (an Obsidian plugin, or a small script), so you can plan your next session from your phone or desktop.
+Works entirely in-game. If you like keeping notes outside the game, **optional** syncing keeps the list in a markdown file (with an Obsidian plugin, a small Windows app, or a script), so you can plan your next session from your phone or desktop.
 
 ## Features
 
@@ -23,6 +23,7 @@ Works entirely in-game. If you like keeping notes outside the game, **optional**
 |-|-|
 | Classic theme |<img width="465" height="323" alt="Screenshot 2026-11-10 091327" src="https://github.com/user-attachments/assets/ee2924f4-7de2-4ad5-a4de-4702f0a78aed" />|
 | Modern theme |<img width="492" height="355" alt="Screenshot 2026-11-10 091319" src="https://github.com/user-attachments/assets/a4e897f8-0a18-4398-8607-e4bb32ee4368" />|
+| Desktop app (Windows) | <img width="480" alt="The desktop app's side quest list" src="docs/desktop-app.png" /> |
 | Sync with companion|<img width="923" height="621" alt="Screenshot 2026-11-10 091547" src="https://github.com/user-attachments/assets/3fb1ab5e-9aed-4580-b5ff-bca9f5ca0a79" />|
 
 

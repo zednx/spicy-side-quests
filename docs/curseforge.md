@@ -42,7 +42,7 @@ Paste everything below the line into the description editor (switch it to Markdo
 
 **Your own side quests for WoW Forever.** A lightweight in-game todo list: jot down the things *you* want to do, sorted by category, tagged, and pinned to the map.
 
-Works entirely in-game. If you like keeping notes outside the game, an **optional** companion script syncs the list with a markdown file (great with **Obsidian**), so you can plan your next session from your phone or desktop.
+Works entirely in-game. If you like keeping notes outside the game, **optional** syncing keeps the list in a markdown file (great with **Obsidian**), using a small Windows app, an Obsidian plugin or a script, so you can plan your next session from your phone or desktop.
 
 ## Features
 
@@ -91,16 +91,19 @@ Want to add side quests when you're not playing? Keep the addon in sync with a m
 - [x] Unlock Tanaris flight path #travel ^d4e5f6
 ```
 
+- **Desktop app** (Windows 10/11, easiest): one small `.exe`, no installer. Add, tick and edit your side quests in a window, or edit the whole markdown file, and it syncs with the game while it's open. Download `SpicySideQuests-vX.Y.Z.exe` from the GitHub Releases page.
 - **Obsidian plugin** (recommended for Obsidian users): installs inside Obsidian on desktop, with a settings page to pick your note and WoW folder. Nothing to download or run.
 - **Sync script**, for any markdown file: uses the PowerShell built into Windows 10/11 (nothing to install), or Node.js on Linux and macOS. It's plain, readable source code running in a terminal window that shows every change.
 
-Either way:
+Whichever you pick:
 - **Two-way:** changes sync every time you `/reload` or log out.
 - **Leaves your notes alone:** only todo lines are touched, never your other notes.
 
 Addons can't access files or the internet, so syncing runs outside the game, and only reads and writes this addon's own files and your chosen note.
 
 **Setup instructions:** see the GitHub page linked on this project.
+
+> **Windows SmartScreen:** the desktop app isn't code-signed yet, so Windows may say *"Windows protected your PC"* the first time. Click **More info → Run anyway**. It's built from the public source by GitHub Actions, and never goes online.
 
 ## Feedback
 
