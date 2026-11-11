@@ -2977,7 +2977,7 @@ dependencies = [
 
 [[package]]
 name = "spicy-side-quests"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "dirs",
  "serde",

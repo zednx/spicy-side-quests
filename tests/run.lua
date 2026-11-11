@@ -61,6 +61,15 @@ local function newObj(kind)
 		GetCheckedTexture = function(self) self.ct = self.ct or newObj("Texture"); return self.ct end,
 		GetThumbTexture = function(self) self.th = self.th or newObj("Texture"); return self.th end,
 		GetFontString = function(self) self.fs = self.fs or newObj("FontString"); return self.fs end,
+		-- Some UI skins resize frames while textures are set; simulate that when asked.
+		SetNormalTexture = function()
+			if FIRE_SIZE_ON_TEXTURE then
+				FIRE_SIZE_ON_TEXTURE = nil -- once is enough
+				for _, fr in ipairs(frames) do
+					if fr.scripts.OnSizeChanged then fr.scripts.OnSizeChanged(fr) end
+				end
+			end
+		end,
 		RegisterEvent = function(self, e) self.events = self.events or {}; self.events[e] = true end,
 		ClearFocus = function() end,
 		GetValue = function(self) return self.value or 0 end,
@@ -305,6 +314,18 @@ check("done must be true", o1 and o1.done == false)
 check("long text capped", o2 and #o2.text == 500 and #o2.category == 60)
 check("bad id rejected", db.items["../evil"] == nil)
 
+-- A skin resizing the window while it's being built must not error (UI.lua:244 'list' nil)
+do
+	local ns3 = {}
+	for line in io.lines(dir .. ADDON .. ".toc") do
+		if line:match("%.lua$") then assert(loadfile(dir .. line))(ADDON, ns3) end
+	end
+	ns3.db = ns3:InitDB(SpicySideQuestsDB)
+	FIRE_SIZE_ON_TEXTURE = true
+	local ok, err = pcall(ns3.CreateUI, ns3)
+	check("the simulated resize happened", FIRE_SIZE_ON_TEXTURE == nil)
+	check("resize during window creation does not error " .. tostring(err), ok)
+end
 
 print = _G.print
 io.write(string.format("%d passed, %d failed\n", passed, failed))

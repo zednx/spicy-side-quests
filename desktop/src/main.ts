@@ -17,7 +17,7 @@ import { dict, terminalSafe } from "../../companion/src/types.ts";
 import { addTodo, deleteLine, editText, sections, StaleLine, toggleDone, type Row } from "./edit.ts";
 import { envInfo, pathOps, tauriFs, type EnvInfo } from "./tauri-fs.ts";
 
-const VERSION = "0.3.0";
+const VERSION = "0.3.1";
 
 // --- tiny DOM helper (text only, never HTML) -------------------------------------------
 type Attrs = Record<string, string | boolean | ((e: Event) => void)>;

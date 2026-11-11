@@ -2,6 +2,7 @@
 local _, ns = ...
 
 local f, list
+local built = false -- true once CreateUI has made every part of the window
 local rows = {}
 local offset = 0
 local filterText = ""
@@ -237,7 +238,8 @@ end
 local atEnd = true
 
 function ns:Refresh()
-	if not f or not f:IsShown() then return end
+	-- Other addons (UI skins) can resize the window while it's still being built.
+	if not built or not f:IsShown() then return end
 	local s = S()
 	local data = self:BuildRows(filterText, s.showDone)
 	local rowH = s.fontSize + 8
@@ -511,6 +513,7 @@ function ns:CreateUI()
 		end
 	end)
 
+	built = true
 	f:SetShown(s.shown)
 	self:ApplySettings()
 end

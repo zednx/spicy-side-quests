@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.1
+
+### Addon
+- Fix: a Lua error at login (`UI.lua:244: attempt to index upvalue 'list'`) when another addon, such as a UI skin, resizes the window while it's being created.
+
 ## v0.3.0
 
 ### Desktop app (new)
