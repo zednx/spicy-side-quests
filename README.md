@@ -343,6 +343,30 @@ Then use the [Obsidian plugin](#obsidian-plugin) on your desktop. Edits made on 
 
 </details>
 
+<details>
+<summary><b>How <code>#tags</code> are read</b></summary>
+
+Tags work like Obsidian's, and are only read on todo lines (`- [ ] …`):
+
+- A tag is `#` followed by letters, numbers, `_`, `/` or `-`. It ends at any other character: `#raid!` is the tag `raid`.
+- It must start the line's text or follow a space. `page#section`, URLs and `` `#code` `` aren't tags.
+- It needs at least one letter: `#1` and `#2026` stay as text.
+- `#gold/farming` is one tag (Obsidian's nested tags).
+- Tags can go anywhere in the line. They're taken out of the side quest's text and shown as tags in game.
+- Case doesn't matter for duplicates: `#Farm #farm` gives one tag, spelled the first way.
+- `## Heading` (with a space) is a category, not a tag. Frontmatter `tags:` are ignored.
+- In game, each side quest keeps up to 20 tags of up to 40 characters.
+
+| You write | Text in game | Tags |
+|---|---|---|
+| `- [ ] Farm #gold Arcanite #farming` | Farm Arcanite | gold, farming |
+| `- [ ] Kill #1 boss #raid!` | Kill #1 boss ! | raid |
+| `- [ ] See wiki.com/page#loot #ref` | See wiki.com/page#loot | ref |
+
+When the sync writes a line, tags go after the text: `- [ ] Farm Arcanite #gold #farming ^id`. Lines you haven't changed are left exactly as you wrote them.
+
+</details>
+
 ## Security
 
 The addon has no network access and only touches its own data. The optional scripts and Obsidian plugin never connect to the internet, and only touch the files listed in [SECURITY.md](SECURITY.md).
