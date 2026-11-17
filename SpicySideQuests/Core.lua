@@ -16,6 +16,7 @@ ns.DEFAULT_SETTINGS = {
 	zoneReminders = true, -- list a zone's side quests in chat when you arrive
 	reminderSound = "whisper", -- and play this sound (see ns.REMINDER_SOUNDS; "none" = silent)
 	shown = true,
+	minimized = false,   -- shrunk down to the chilli icon
 	width = 320,
 	height = 400,
 	point = nil,         -- { point, relPoint, x, y }

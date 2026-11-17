@@ -83,7 +83,11 @@ local function newObj(kind)
 	return o2
 end
 
-function CreateFrame(kind) return newObj(kind) end
+function CreateFrame(kind, name)
+	local o = newObj(kind)
+	if name then _G[name] = o end
+	return o
+end
 function CreateFont() return newObj("Font") end
 GameFontHighlight, GameFontNormal, ChatFontNormal = newObj("Font"), newObj("Font"), newObj("Font")
 function GetLocale() return "enUS" end
@@ -157,6 +161,7 @@ check("parse coords only", loc.here and loc.x == 45 and loc.y == 60)
 fire("ADDON_LOADED", ADDON)
 check("db created", type(SpicySideQuestsDB) == "table" and SpicySideQuestsDB.categories[1] == "General")
 fire("PLAYER_LOGIN")
+local mainWin, mainIcon = SpicySideQuestsFrame, SpicySideQuestsMini -- later tests build more windows
 
 -- Add via slash command
 SlashCmdList.SPICYSIDEQUESTS("add Farm Arcanite #farming @here")
@@ -325,6 +330,32 @@ do
 	local ok, err = pcall(ns3.CreateUI, ns3)
 	check("the simulated resize happened", FIRE_SIZE_ON_TEXTURE == nil)
 	check("resize during window creation does not error " .. tostring(err), ok)
+end
+
+-- Minimise: the window shrinks to the chilli icon and opens again with a click
+do
+	local win, icon = mainWin, mainIcon
+	ns:ToggleUI(true)
+	ns:SetMinimized(true)
+	check("minimise hides the window and shows the icon", not win:IsShown() and icon:IsShown())
+	check("minimised state is saved", ns.db.settings.minimized == true)
+	icon.scripts.OnClick(icon)
+	check("clicking the icon opens the window", win:IsShown() and not icon:IsShown() and not ns.db.settings.minimized)
+	ns:SetMinimized(true)
+	ns:ToggleUI()
+	check("/ssq on the icon opens the window", win:IsShown() and not icon:IsShown())
+	ns:ToggleUI()
+	check("/ssq hides it", not win:IsShown() and not icon:IsShown())
+	ns:ToggleUI(true)
+	ns:SetMinimized(true)
+	ns.db.settings.hideInCombat = true
+	win.scripts.OnEvent(win, "PLAYER_REGEN_DISABLED")
+	check("hide in combat hides the icon too", not icon:IsShown())
+	win.scripts.OnEvent(win, "PLAYER_REGEN_ENABLED")
+	check("and brings it back after", icon:IsShown() and not win:IsShown())
+	ns.db.settings.hideInCombat = false
+	ns:ResetPosition()
+	check("reset position opens the window", win:IsShown() and not icon:IsShown())
 end
 
 -- Old on/off reminder sound setting becomes the default sound

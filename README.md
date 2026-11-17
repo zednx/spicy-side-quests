@@ -15,6 +15,7 @@ Works entirely in-game. If you like keeping notes outside the game, **optional**
   - **Classic**: the familiar Blizzard look
   - **Modern**: flat and minimal, fits UIs like Daylight or ElvUI
 - **Zone reminders**: arrive in a zone or town with open side quests (e.g. `@Stormwind City`) and they're listed in chat with a sound of your choice (or none).
+- **Minimise**: shrink the window to a small chilli icon and click it to open it again.
 - **Adjustable**: background and window opacity, font size, wrap long side quests, lock position, hide completed, hide in combat.
 - **Lightweight**: no libraries, no dependencies, no ads, nothing phoning home.
 

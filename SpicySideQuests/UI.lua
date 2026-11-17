@@ -1,7 +1,7 @@
 -- Main todo window.
 local _, ns = ...
 
-local f, list
+local f, list, mini
 local built = false -- true once CreateUI has made every part of the window
 local rows = {}
 local offset = 0
@@ -351,7 +351,7 @@ function ns:ResetPosition()
 		f:SetPoint("CENTER", UIParent, "CENTER", 300, 0)
 		f:SetSize(s.width, s.height)
 		s.shown = true
-		f:Show()
+		ns:SetMinimized(false)
 	end
 end
 
@@ -359,6 +359,7 @@ function ns:ApplySettings()
 	if not f then return end
 	local s = S()
 	f:SetAlpha(s.alpha)
+	if mini then mini:SetAlpha(s.alpha) end
 
 	local t = ns:Theme()
 	local path, flags = ns:ThemeFont(GameFontHighlight)
@@ -372,11 +373,81 @@ function ns:ApplySettings()
 	self:Refresh()
 end
 
+-- Shows the window, the minimised icon, or neither. combatHidden: hidden by "Hide in combat".
+local combatHidden = false
+local function updateVisibility()
+	local s = S()
+	local visible = s.shown and not combatHidden
+	f:SetShown(visible and not s.minimized)
+	mini:SetShown(visible and s.minimized and true or false)
+end
+
 function ns:ToggleUI(show)
 	if not f then return end
-	if show == nil then show = not f:IsShown() end
-	S().shown = show
-	f:SetShown(show)
+	local s = S()
+	if show == nil then
+		-- /ssq on the minimised icon opens the window rather than hiding everything
+		if s.shown and s.minimized then
+			self:SetMinimized(false)
+			return
+		end
+		show = not s.shown
+	end
+	s.shown = show
+	updateVisibility()
+end
+
+function ns:SetMinimized(minimized)
+	if not f then return end
+	S().minimized = minimized and true or false
+	updateVisibility()
+end
+
+-- The minimised window: just the chilli, where the window's top-left corner is.
+local function createMini()
+	mini = CreateFrame("Button", "SpicySideQuestsMini", UIParent, "BackdropTemplate")
+	mini:SetSize(30, 24)
+	mini:SetPoint("TOPLEFT", f, "TOPLEFT")
+	mini:SetFrameStrata("MEDIUM")
+	mini:SetClampedToScreen(true)
+	mini:SetMovable(true)
+	ns.StylePanel(mini, function() return S().bgAlpha end)
+	mini.icon = mini:CreateTexture(nil, "ARTWORK")
+	mini.icon:SetTexture(ns.CHILLI)
+	mini.icon:SetSize(18, 18)
+	mini.icon:SetPoint("CENTER")
+	mini:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	mini:RegisterForClicks("LeftButtonUp")
+	mini:RegisterForDrag("LeftButton")
+	mini:SetScript("OnClick", function() ns:SetMinimized(false) end)
+	mini:SetScript("OnDragStart", function(self)
+		if not S().locked then self:StartMoving() end
+	end)
+	mini:SetScript("OnDragStop", function(self)
+		self:StopMovingOrSizing()
+		-- move the (hidden) window to where the icon was dropped, then pin the icon to it again
+		local left, top = self:GetLeft(), self:GetTop()
+		if left and top then
+			f:ClearAllPoints()
+			f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
+			savePosition()
+		end
+		self:ClearAllPoints()
+		self:SetPoint("TOPLEFT", f, "TOPLEFT")
+	end)
+	mini:SetScript("OnEnter", function(self)
+		local open = 0
+		for _, item in pairs(ns.db.items) do
+			if not item.done and not item.deleted then open = open + 1 end
+		end
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetText("Spicy Side Quests")
+		GameTooltip:AddLine(open .. " open side quest" .. (open == 1 and "" or "s"), 1, 1, 1)
+		GameTooltip:AddLine("Click to open, drag to move", 0.7, 0.7, 0.7)
+		GameTooltip:Show()
+	end)
+	mini:SetScript("OnLeave", GameTooltip_Hide)
+	mini:Hide()
 end
 
 function ns:CreateUI()
@@ -417,7 +488,7 @@ function ns:CreateUI()
 	f.icon:SetPoint("TOPLEFT", 6, -3)
 	f.title = f:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	f.title:SetPoint("LEFT", f.icon, "RIGHT", 3, 0)
-	f.title:SetPoint("RIGHT", f, "TOPRIGHT", -44, -12)
+	f.title:SetPoint("RIGHT", f, "TOPRIGHT", -62, -12)
 	f.title:SetJustifyH("LEFT")
 	f.title:SetWordWrap(false)
 	ns.StyleTitle(f.title)
@@ -429,6 +500,10 @@ function ns:CreateUI()
 	local gear = makeIconButton(f, "Interface\\Icons\\INV_Misc_Gear_01", 14, "Settings")
 	gear:SetPoint("RIGHT", close, "LEFT", -4, 0)
 	gear:SetScript("OnClick", function() ns:ToggleSettings() end)
+
+	local minimise = makeIconButton(f, "Interface\\ChatFrame\\UI-ChatIcon-Minimize-Up", 14, "Minimise")
+	minimise:SetPoint("RIGHT", gear, "LEFT", -4, 0)
+	minimise:SetScript("OnClick", function() ns:SetMinimized(true) end)
 
 	-- Filter
 	f.filterBox = makeEditBox(f, "Filter... (text or #tag)")
@@ -505,15 +580,12 @@ function ns:CreateUI()
 	f:RegisterEvent("PLAYER_REGEN_DISABLED")
 	f:RegisterEvent("PLAYER_REGEN_ENABLED")
 	f:SetScript("OnEvent", function(self, event)
-		if not S().hideInCombat then return end
-		if event == "PLAYER_REGEN_DISABLED" then
-			self:Hide()
-		elseif S().shown then
-			self:Show()
-		end
+		combatHidden = event == "PLAYER_REGEN_DISABLED" and S().hideInCombat
+		updateVisibility()
 	end)
 
+	createMini()
 	built = true
-	f:SetShown(s.shown)
+	updateVisibility()
 	self:ApplySettings()
 end
