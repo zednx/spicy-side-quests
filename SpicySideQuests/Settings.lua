@@ -64,7 +64,7 @@ end
 
 local function create()
 	panel = CreateFrame("Frame", "SpicySideQuestsSettings", UIParent, "BackdropTemplate")
-	panel:SetSize(250, 442)
+	panel:SetSize(250, 446)
 	panel:SetPoint("CENTER")
 	panel:SetFrameStrata("DIALOG")
 	ns.StylePanel(panel, function() return 0.95 end)
@@ -151,9 +151,27 @@ local function create()
 	add(makeCheck(panel, "Zone reminders in chat",
 		function() return S().zoneReminders end,
 		function(v) S().zoneReminders = v end), 0)
-	add(makeCheck(panel, "Reminder sound",
-		function() return S().reminderSound end,
-		function(v) S().reminderSound = v end), 0)
+
+	-- Reminder sound: cycles through ns.REMINDER_SOUNDS and plays each one as a preview
+	local sound = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	sound:SetSize(200, 22)
+	ns.StyleButton(sound)
+	local function soundLabel()
+		sound:SetText("Reminder sound: " .. ns:ReminderSound().name)
+	end
+	sound:SetScript("OnClick", function()
+		local list, cur = ns.REMINDER_SOUNDS, ns:ReminderSound()
+		for i, snd in ipairs(list) do
+			if snd == cur then
+				S().reminderSound = list[i % #list + 1].key
+				break
+			end
+		end
+		soundLabel()
+		ns:PlayReminderSound()
+	end)
+	sound.Sync = soundLabel
+	add(sound, 4)
 
 	local clear = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	clear:SetSize(140, 22)

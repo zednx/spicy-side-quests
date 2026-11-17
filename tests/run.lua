@@ -327,6 +327,12 @@ do
 	check("resize during window creation does not error " .. tostring(err), ok)
 end
 
+-- Old on/off reminder sound setting becomes the default sound
+do
+	local db = ns2:InitDB({ settings = { reminderSound = true } })
+	check("old reminderSound setting migrates", db.settings.reminderSound == "whisper")
+end
+
 -- Zone reminders: entering a zone lists its open side quests in chat and plays a sound
 do
 	local zone, sub, now, sounds = "Durotar", "", 5000, 0
@@ -334,7 +340,8 @@ do
 	GetRealZoneText = function() return zone end
 	GetSubZoneText = function() return sub end
 	GetTime = function() return now end
-	PlaySound = function() sounds = sounds + 1 end
+	local played
+	PlaySound = function(id) sounds = sounds + 1; played = id end
 	local oldBest = C_Map.GetBestMapForUnit
 	C_Map.GetBestMapForUnit = function() return nil end -- match by zone name here
 	local function said(text)
@@ -357,7 +364,7 @@ do
 	check("reminder shows coordinates", said("(62.1, 75.0)"))
 	check("reminder escapes text", said("Visit the ||cffff0000bank"))
 	check("completed side quests are not reminded", not said("Already done"))
-	check("reminder plays a sound", sounds == 1)
+	check("reminder plays a sound, the gentle chime by default", sounds == 1 and played == 3081)
 
 	enter("Elwynn Forest")
 	enter("Stormwind City")
@@ -366,11 +373,13 @@ do
 	enter("Stormwind City")
 	check("reminds again after the cooldown", said("Buy a pet cat") and sounds == 2)
 
+	ns.db.settings.reminderSound = "ping"
 	enter("Stranglethorn Vale", "Booty Bay")
+	check("the picked sound plays", played == 3175)
 	check("subzones count too", said("Side quest in Booty Bay:") and said("Fish in the harbour"))
 
 	now = now + ns.REMINDER_COOLDOWN + 1
-	ns.db.settings.reminderSound = false
+	ns.db.settings.reminderSound = "none"
 	enter("Stormwind City")
 	check("sound can be turned off", said("Buy a pet cat") and sounds == 3)
 	now = now + ns.REMINDER_COOLDOWN + 1

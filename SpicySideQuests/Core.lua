@@ -14,7 +14,7 @@ ns.DEFAULT_SETTINGS = {
 	wrap = true,         -- long side quests wrap onto extra lines
 	hideInCombat = false,
 	zoneReminders = true, -- list a zone's side quests in chat when you arrive
-	reminderSound = true, -- and play a warning sound
+	reminderSound = "whisper", -- and play this sound (see ns.REMINDER_SOUNDS; "none" = silent)
 	shown = true,
 	width = 320,
 	height = 400,
@@ -372,6 +372,7 @@ function ns:InitDB(saved)
 	db.order = db.order or {}
 	db.categories = db.categories or {}
 	db.settings = db.settings or {}
+	if type(db.settings.reminderSound) ~= "string" then db.settings.reminderSound = nil end -- was on/off
 	copyDefaults(db.settings, self.DEFAULT_SETTINGS)
 	self.db = db
 	self:EnsureCategory(self.DEFAULT_CATEGORY)

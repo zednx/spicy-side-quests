@@ -5,6 +5,31 @@ local _, ns = ...
 ns.REMINDER_COOLDOWN = 300 -- seconds before the same side quest is announced again
 local MAX_LINES = 8
 
+-- Sounds to pick from in /ssq config. Looked up by SOUNDKIT name, with the ID as a fallback.
+ns.REMINDER_SOUNDS = {
+	{ key = "whisper", name = "Whisper chime", kit = "TELL_MESSAGE", id = 3081 },
+	{ key = "ping", name = "Map ping", kit = "MAP_PING", id = 3175 },
+	{ key = "quest", name = "Quest log", kit = "IG_QUEST_LIST_OPEN", id = 875 },
+	{ key = "ready", name = "Ready check", kit = "READY_CHECK", id = 8960 },
+	{ key = "alarm", name = "Alarm clock", kit = "ALARM_CLOCK_WARNING_3", id = 12889 },
+	{ key = "raid", name = "Raid warning", kit = "RAID_WARNING", id = 8959 },
+	{ key = "none", name = "None" },
+}
+
+function ns:ReminderSound()
+	local key = self.db.settings.reminderSound
+	for _, snd in ipairs(self.REMINDER_SOUNDS) do
+		if snd.key == key then return snd end
+	end
+	return self.REMINDER_SOUNDS[1]
+end
+
+function ns:PlayReminderSound()
+	local snd = self:ReminderSound()
+	if not snd.id or not PlaySound then return end
+	pcall(PlaySound, (SOUNDKIT and SOUNDKIT[snd.kit]) or snd.id, "Master")
+end
+
 local lastAnnounced = {} -- [id] = GetTime() of the last reminder
 
 local function clock()
@@ -64,9 +89,7 @@ function ns:CheckZoneReminders()
 	end
 	if #due > MAX_LINES then print("  ...and " .. (#due - MAX_LINES) .. " more (/ssq)") end
 
-	if s.reminderSound and PlaySound then
-		pcall(PlaySound, (SOUNDKIT and SOUNDKIT.RAID_WARNING) or 8959, "Master")
-	end
+	self:PlayReminderSound()
 end
 
 local events = CreateFrame("Frame")

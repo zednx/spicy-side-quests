@@ -3,7 +3,8 @@
 ## v0.4.0
 
 ### Addon
-- New: **zone reminders**. When you arrive in a zone or subzone (like Stormwind City or Booty Bay) with open side quests, they're listed in chat and a warning sound plays. Each side quest is reminded at most once every 5 minutes. Turn off the reminders or just the sound in `/ssq config`.
+- New: **zone reminders**. When you arrive in a zone or subzone (like Stormwind City or Booty Bay) with open side quests, they're listed in chat and a sound plays. Each side quest is reminded at most once every 5 minutes.
+- Pick the sound in `/ssq config` (click to cycle and hear each one): Whisper chime (default), Map ping, Quest log, Ready check, Alarm clock, Raid warning or None. Reminders can also be turned off completely.
 - Side quests need a location to be reminded: add `@Stormwind City` (or `@here`) when you write them, or `[zone:: Stormwind City]` in the markdown file.
 
 ## v0.3.1
