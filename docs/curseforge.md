@@ -52,8 +52,8 @@ Works entirely in-game. If you like keeping notes outside the game, **optional**
 - **Two themes**:
   - **Classic**: the familiar Blizzard look
   - **Modern**: flat and minimal, fits UIs like Daylight or ElvUI
-- **Zone reminders**: arrive in a zone or town with open side quests (e.g. `@Stormwind City`) and they're listed in chat with a sound of your choice (or none).
-- **Minimise**: shrink the window to a small chilli icon and click it to open it again.
+- **Zone reminders**: arrive in a zone or town with open side quests (e.g. `@Stormwind City`) and they're listed in chat, with a sound you pick (built-in, any **SharedMedia** sound, or none).
+- **Minimise**: shrink the window to a small chilli icon; click it to open it again.
 - **Adjustable**: background and window opacity, font size, wrap long side quests, lock position, hide completed, hide in combat.
 - **Lightweight**: no libraries, no dependencies, no ads, nothing phoning home.
 
@@ -61,7 +61,7 @@ Works entirely in-game. If you like keeping notes outside the game, **optional**
 
 | Command | What it does |
 |---|---|
-| `/spicy` or `/ssq` | Show or hide the window |
+| `/spicy` or `/ssq` | Show or hide the window (opens it if it's minimised) |
 | `/ssq add <text>` | Add a side quest |
 | `/ssq config` | Settings |
 | `/ssq reset` | Reset the window position |
@@ -82,6 +82,12 @@ Loot chest @52.1, 41.3
 - `@Zone Name x, y`: a specific zone and coordinates
 
 **Click** to complete, **right-click** to edit, hover and click the **X** to delete. Press **Tab** in the category box to cycle through existing categories.
+
+## Zone reminders
+
+Give a side quest a location (`@Stormwind City`, `@Booty Bay` or `@here`) and when you arrive there it's listed in chat with a sound. Pick the sound in `/ssq config`: a few built-in ones, any **SharedMedia** sound from your other addons, or none. Each side quest is reminded at most once every 5 minutes, and completed ones are skipped.
+
+The **–** button in the title bar minimises the window to a small chilli icon. Click it (or type `/ssq`) to open it again.
 
 ## Optional: sync with Obsidian / markdown
 

@@ -14,8 +14,8 @@ Works entirely in-game. If you like keeping notes outside the game, **optional**
 - **Two themes**:
   - **Classic**: the familiar Blizzard look
   - **Modern**: flat and minimal, fits UIs like Daylight or ElvUI
-- **Zone reminders**: arrive in a zone or town with open side quests (e.g. `@Stormwind City`) and they're listed in chat with a sound of your choice (or none).
-- **Minimise**: shrink the window to a small chilli icon and click it to open it again.
+- **Zone reminders**: arrive in a zone or town with open side quests (e.g. `@Stormwind City`) and they're listed in chat, with a sound you pick (built-in, any **SharedMedia** sound, or none).
+- **Minimise**: shrink the window to a small chilli icon; click it to open it again.
 - **Adjustable**: background and window opacity, font size, wrap long side quests, lock position, hide completed, hide in combat.
 - **Lightweight**: no libraries, no dependencies, no ads, nothing phoning home.
 
@@ -37,7 +37,7 @@ Install from [CurseForge](https://www.curseforge.com/wow/addons/spicy-side-quest
 
 | Command | What it does |
 |---|---|
-| `/spicy` or `/ssq` | Show or hide the window |
+| `/spicy` or `/ssq` | Show or hide the window (opens it if it's minimised) |
 | `/ssq add <text>` | Add a side quest |
 | `/ssq config` | Settings |
 | `/ssq reset` | Reset the window position |
@@ -58,6 +58,26 @@ Loot chest @52.1, 41.3
 - `@Zone Name x, y`: a specific zone and coordinates
 
 **Click** to complete, **right-click** to edit, hover and click the **X** to delete. Press **Tab** in the category box to cycle through existing categories.
+
+The **–** button in the title bar minimises the window to a chilli icon. Click the icon (or type `/ssq`) to open it again, or drag it to move it.
+
+<details>
+<summary><b>Zone reminders</b></summary>
+
+When you arrive somewhere with open side quests, they're listed in chat:
+
+```
+Spicy Side Quests: 2 side quests in Stormwind City:
+  - Buy a pet cat
+  - Visit the bank (62.1, 75.0)
+```
+
+- A side quest needs a location: `@Stormwind City` or `@here` in game, or `[zone:: Stormwind City]` in the markdown file. Use the name the game shows (*Stormwind City*, not *Stormwind*).
+- Subzones work too: `@Booty Bay` reminds you when you ride into Booty Bay.
+- Completed side quests are skipped, and each one is reminded at most once every 5 minutes.
+- In `/ssq config`, **Zone reminders in chat** turns them on or off, and **Reminder sound** picks the sound. It lists the built-in sounds plus any sounds your other addons share through LibSharedMedia (SharedMedia, ElvUI, Details…), in blue. Picking one plays it.
+
+</details>
 
 ## Optional: sync with a markdown file
 
