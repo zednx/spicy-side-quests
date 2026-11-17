@@ -62,9 +62,107 @@ local function makeCheck(parent, label, get, set)
 	return c
 end
 
+-- A dropdown: a button showing the current choice that opens a scrollable list.
+-- getChoices returns { { key, name, shared? } }, getCurrent the current one, set(key) picks one.
+local VISIBLE = 10
+
+local function makeDropdown(parent, label, getChoices, getCurrent, set)
+	local holder = CreateFrame("Frame", nil, parent)
+	holder:SetSize(220, 40)
+	local text = holder:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+	text:SetPoint("TOPLEFT")
+	text:SetText(label)
+
+	local button = CreateFrame("Button", nil, holder, "UIPanelButtonTemplate")
+	button:SetSize(200, 22)
+	button:SetPoint("TOPLEFT", 0, -14)
+	ns.StyleButton(button)
+	local arrow = button:CreateTexture(nil, "OVERLAY")
+	arrow:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
+	arrow:SetSize(12, 12)
+	arrow:SetPoint("RIGHT", -6, 0)
+	arrow:SetRotation(-math.pi / 2) -- point down
+
+	local list = CreateFrame("Frame", nil, button, "BackdropTemplate")
+	list:SetPoint("TOPLEFT", button, "BOTTOMLEFT", 0, -2)
+	list:SetWidth(200)
+	list:SetFrameStrata("FULLSCREEN_DIALOG")
+	list:EnableMouse(true)
+	list:EnableMouseWheel(true)
+	ns.StylePanel(list, function() return 0.95 end)
+	list:Hide()
+
+	local choices, offset, rows = {}, 0, {}
+	local function render()
+		local current = getCurrent().key
+		for i, row in ipairs(rows) do
+			local c = choices[offset + i]
+			row.choice = c
+			if c then
+				local name = ns.Escape(c.name)
+				if c.shared then name = "|cff99ccff" .. name .. "|r" end
+				row.label:SetText(name)
+				row.check:SetShown(c.key == current)
+				row:Show()
+			else
+				row:Hide()
+			end
+		end
+		list:SetHeight(math.min(#choices, VISIBLE) * 18 + 8)
+	end
+
+	for i = 1, VISIBLE do
+		local row = CreateFrame("Button", nil, list)
+		row:SetSize(192, 18)
+		row:SetPoint("TOPLEFT", 4, -4 - (i - 1) * 18)
+		row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+		row.check = row:CreateTexture(nil, "ARTWORK")
+		row.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+		row.check:SetSize(14, 14)
+		row.check:SetPoint("LEFT", 2, 0)
+		row.label = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+		row.label:SetPoint("LEFT", 18, 0)
+		row.label:SetPoint("RIGHT", -4, 0)
+		row.label:SetJustifyH("LEFT")
+		row.label:SetWordWrap(false)
+		row:SetScript("OnClick", function(self)
+			if not self.choice then return end
+			set(self.choice.key)
+			list:Hide()
+			holder.Sync()
+		end)
+		rows[i] = row
+	end
+
+	list:SetScript("OnMouseWheel", function(_, delta)
+		offset = math.max(0, math.min(offset - delta * 3, #choices - VISIBLE))
+		render()
+	end)
+
+	button:SetScript("OnClick", function()
+		if list:IsShown() then list:Hide() return end
+		choices = getChoices()
+		-- start scrolled to the current choice
+		local current = getCurrent().key
+		offset = 0
+		for i, c in ipairs(choices) do
+			if c.key == current then offset = math.max(0, math.min(i - 1, #choices - VISIBLE)) break end
+		end
+		render()
+		list:Show()
+	end)
+	parent:HookScript("OnHide", function() list:Hide() end)
+
+	holder.Sync = function()
+		button:SetText(ns.Escape(getCurrent().name))
+	end
+	holder.button, holder.list, holder.rows = button, list, rows
+	return holder
+end
+
 local function create()
 	panel = CreateFrame("Frame", "SpicySideQuestsSettings", UIParent, "BackdropTemplate")
-	panel:SetSize(250, 446)
+	panel:SetSize(250, 464)
 	panel:SetPoint("CENTER")
 	panel:SetFrameStrata("DIALOG")
 	ns.StylePanel(panel, function() return 0.95 end)
@@ -152,26 +250,14 @@ local function create()
 		function() return S().zoneReminders end,
 		function(v) S().zoneReminders = v end), 0)
 
-	-- Reminder sound: cycles through ns.REMINDER_SOUNDS and plays each one as a preview
-	local sound = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	sound:SetSize(200, 22)
-	ns.StyleButton(sound)
-	local function soundLabel()
-		sound:SetText("Reminder sound: " .. ns:ReminderSound().name)
-	end
-	sound:SetScript("OnClick", function()
-		local list, cur = ns.REMINDER_SOUNDS, ns:ReminderSound()
-		for i, snd in ipairs(list) do
-			if snd == cur then
-				S().reminderSound = list[i % #list + 1].key
-				break
-			end
-		end
-		soundLabel()
-		ns:PlayReminderSound()
-	end)
-	sound.Sync = soundLabel
-	add(sound, 4)
+	ns.soundDropdown = makeDropdown(panel, "Reminder sound",
+		function() return ns:SoundChoices() end,
+		function() return ns:ReminderSound() end,
+		function(key)
+			S().reminderSound = key
+			ns:PlayReminderSound() -- preview
+		end)
+	add(ns.soundDropdown, 4)
 
 	local clear = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	clear:SetSize(140, 22)

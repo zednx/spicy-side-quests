@@ -16,18 +16,50 @@ ns.REMINDER_SOUNDS = {
 	{ key = "none", name = "None" },
 }
 
+-- Sounds other addons share through LibSharedMedia (no library is bundled; it's used when present).
+local function sharedMedia()
+	return LibStub and LibStub("LibSharedMedia-3.0", true)
+end
+
+-- Every choice for the sound dropdown: the built-in sounds, then shared ones ("lsm:<name>").
+function ns:SoundChoices()
+	local list = {}
+	for _, snd in ipairs(self.REMINDER_SOUNDS) do list[#list + 1] = snd end
+	local lsm = sharedMedia()
+	if lsm then
+		local ok, names = pcall(lsm.List, lsm, "sound")
+		if ok and type(names) == "table" then
+			for _, name in ipairs(names) do
+				if type(name) == "string" and name ~= "None" then
+					list[#list + 1] = { key = "lsm:" .. name, name = name, shared = true }
+				end
+			end
+		end
+	end
+	return list
+end
+
 function ns:ReminderSound()
 	local key = self.db.settings.reminderSound
 	for _, snd in ipairs(self.REMINDER_SOUNDS) do
 		if snd.key == key then return snd end
 	end
-	return self.REMINDER_SOUNDS[1]
+	local name = type(key) == "string" and key:match("^lsm:(.+)$")
+	local lsm = name and sharedMedia()
+	if lsm then
+		local ok, path = pcall(lsm.Fetch, lsm, "sound", name, true) -- true: no fallback to LSM's default
+		if ok and path then return { key = key, name = name, path = path, shared = true } end
+	end
+	return self.REMINDER_SOUNDS[1] -- unknown, or its addon was removed
 end
 
 function ns:PlayReminderSound()
 	local snd = self:ReminderSound()
-	if not snd.id or not PlaySound then return end
-	pcall(PlaySound, (SOUNDKIT and SOUNDKIT[snd.kit]) or snd.id, "Master")
+	if snd.path and PlaySoundFile then
+		pcall(PlaySoundFile, snd.path, "Master")
+	elseif snd.id and PlaySound then
+		pcall(PlaySound, (SOUNDKIT and SOUNDKIT[snd.kit]) or snd.id, "Master")
+	end
 end
 
 local lastAnnounced = {} -- [id] = GetTime() of the last reminder

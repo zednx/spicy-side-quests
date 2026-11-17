@@ -358,6 +358,47 @@ do
 	check("reset position opens the window", win:IsShown() and not icon:IsShown())
 end
 
+-- Reminder sound dropdown: built-in sounds plus LibSharedMedia sounds from other addons
+do
+	local plays, files = 0, {}
+	local oldPS, oldPSF = PlaySound, PlaySoundFile
+	PlaySound = function() plays = plays + 1 end
+	PlaySoundFile = function(path) files[#files + 1] = path end
+	local sounds = { ["None"] = 1, ["Bell"] = [[Interface\AddOns\Media\bell.ogg]], ["Gong |cffff0000x"] = [[Interface\AddOns\Media\gong.ogg]] }
+	LibStub = function(name, silent)
+		if name ~= "LibSharedMedia-3.0" then return end
+		return {
+			List = function(_, kind) return kind == "sound" and { "Bell", "Gong |cffff0000x", "None" } or {} end,
+			Fetch = function(_, kind, key) return sounds[key] end,
+		}
+	end
+	local choices = ns:SoundChoices()
+	local names = {}
+	for _, c in ipairs(choices) do names[#names + 1] = c.name end
+	check("dropdown lists built-in sounds first", choices[1].key == "whisper" and choices[#ns.REMINDER_SOUNDS].key == "none")
+	check("dropdown lists shared sounds, not their 'None'", choices[#ns.REMINDER_SOUNDS + 1].name == "Bell" and #choices == #ns.REMINDER_SOUNDS + 2)
+
+	local dd = ns.soundDropdown
+	dd.button.scripts.OnClick(dd.button)
+	check("dropdown opens", dd.list:IsShown())
+	local bell
+	for _, row in ipairs(dd.rows) do if row.choice and row.choice.name == "Bell" then bell = row end end
+	check("shared sound has a row", bell ~= nil)
+	bell.scripts.OnClick(bell)
+	check("picking a shared sound saves it and previews it", ns.db.settings.reminderSound == "lsm:Bell" and files[#files] == sounds.Bell)
+	check("dropdown closes after picking", not dd.list:IsShown())
+	ns:PlayReminderSound()
+	check("reminders play the shared sound file", #files == 2 and files[2] == sounds.Bell)
+
+	LibStub = nil -- the addon sharing it was removed
+	ns:PlayReminderSound()
+	check("a missing shared sound falls back to the default", plays == 1 and ns:ReminderSound().key == "whisper")
+	LibStub = function() return nil end
+	check("no LibSharedMedia: just the built-in sounds", #ns:SoundChoices() == #ns.REMINDER_SOUNDS)
+	ns.db.settings.reminderSound = "whisper"
+	PlaySound, PlaySoundFile, LibStub = oldPS, oldPSF, nil
+end
+
 -- Old on/off reminder sound setting becomes the default sound
 do
 	local db = ns2:InitDB({ settings = { reminderSound = true } })
