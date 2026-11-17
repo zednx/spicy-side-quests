@@ -1,6 +1,6 @@
 [package]
 name = "spicy-side-quests"
-version = "0.3.1"
+version = "0.4.0"
 description = "Spicy Side Quests: sync a markdown file with the WoW Forever addon"
 license = "MIT"
 repository = "https://github.com/zednx/spicy-side-quests"

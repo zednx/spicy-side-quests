@@ -64,7 +64,7 @@ end
 
 local function create()
 	panel = CreateFrame("Frame", "SpicySideQuestsSettings", UIParent, "BackdropTemplate")
-	panel:SetSize(250, 394)
+	panel:SetSize(250, 442)
 	panel:SetPoint("CENTER")
 	panel:SetFrameStrata("DIALOG")
 	ns.StylePanel(panel, function() return 0.95 end)
@@ -148,6 +148,12 @@ local function create()
 	add(makeCheck(panel, "Hide in combat",
 		function() return S().hideInCombat end,
 		function(v) S().hideInCombat = v end), 0)
+	add(makeCheck(panel, "Zone reminders in chat",
+		function() return S().zoneReminders end,
+		function(v) S().zoneReminders = v end), 0)
+	add(makeCheck(panel, "Reminder sound",
+		function() return S().reminderSound end,
+		function(v) S().reminderSound = v end), 0)
 
 	local clear = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	clear:SetSize(140, 22)

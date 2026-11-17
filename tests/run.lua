@@ -327,6 +327,70 @@ do
 	check("resize during window creation does not error " .. tostring(err), ok)
 end
 
+-- Zone reminders: entering a zone lists its open side quests in chat and plays a sound
+do
+	local zone, sub, now, sounds = "Durotar", "", 5000, 0
+	local oldZone = GetRealZoneText
+	GetRealZoneText = function() return zone end
+	GetSubZoneText = function() return sub end
+	GetTime = function() return now end
+	PlaySound = function() sounds = sounds + 1 end
+	local oldBest = C_Map.GetBestMapForUnit
+	C_Map.GetBestMapForUnit = function() return nil end -- match by zone name here
+	local function said(text)
+		for _, l in ipairs(printed) do if l:find(text, 1, true) then return true end end
+	end
+	local function enter(z, sz)
+		zone, sub = z, sz or ""
+		for i = #printed, 1, -1 do printed[i] = nil end
+		ns:CheckZoneReminders() -- (fire() would also reach the extra copies loaded above)
+	end
+
+	ns:AddItem("Buy a pet cat @Stormwind City")
+	ns:AddItem("Visit the |cffff0000bank @Stormwind City 62.1, 75.0")
+	ns:AddItem("Already done @Stormwind City")
+	for _, it in pairs(ns.db.items) do if it.text == "Already done" then ns:SetDone(it.id, true) end end
+	ns:AddItem("Fish in the harbour @Booty Bay")
+
+	enter("Stormwind City")
+	check("reminder lists the zone's side quests", said("side quests in Stormwind City:") and said("Buy a pet cat"))
+	check("reminder shows coordinates", said("(62.1, 75.0)"))
+	check("reminder escapes text", said("Visit the ||cffff0000bank"))
+	check("completed side quests are not reminded", not said("Already done"))
+	check("reminder plays a sound", sounds == 1)
+
+	enter("Elwynn Forest")
+	enter("Stormwind City")
+	check("no repeat within the cooldown", #printed == 0 and sounds == 1)
+	now = now + ns.REMINDER_COOLDOWN + 1
+	enter("Stormwind City")
+	check("reminds again after the cooldown", said("Buy a pet cat") and sounds == 2)
+
+	enter("Stranglethorn Vale", "Booty Bay")
+	check("subzones count too", said("Side quest in Booty Bay:") and said("Fish in the harbour"))
+
+	now = now + ns.REMINDER_COOLDOWN + 1
+	ns.db.settings.reminderSound = false
+	enter("Stormwind City")
+	check("sound can be turned off", said("Buy a pet cat") and sounds == 3)
+	now = now + ns.REMINDER_COOLDOWN + 1
+	ns.db.settings.zoneReminders = false
+	enter("Stormwind City")
+	check("reminders can be turned off", #printed == 0)
+
+	GetRealZoneText, GetSubZoneText, GetTime, PlaySound = oldZone, nil, nil, nil
+	C_Map.GetBestMapForUnit = oldBest
+
+	-- ...and by map ID, so a side quest saved with a zone's map matches there
+	zone, sub = "Somewhere", ""
+	for i = #printed, 1, -1 do printed[i] = nil end
+	ns.db.settings.zoneReminders = true
+	GetRealZoneText, GetSubZoneText = function() return zone end, function() return sub end
+	ns:CheckZoneReminders()
+	check("matches by map ID", said("From Obsidian"))
+	GetRealZoneText, GetSubZoneText = oldZone, nil
+end
+
 print = _G.print
 io.write(string.format("%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

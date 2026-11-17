@@ -1,7 +1,7 @@
 -- Spicy Side Quests: data model, persistence and slash commands.
 -- Works fully standalone; the companion app only feeds Inbox.lua.
 local ADDON, ns = ...
-ns.VERSION = "0.3.1"
+ns.VERSION = "0.4.0"
 ns.DEFAULT_CATEGORY = "General"
 ns.TOMBSTONE_DAYS = 30
 
@@ -13,6 +13,8 @@ ns.DEFAULT_SETTINGS = {
 	showDone = true,
 	wrap = true,         -- long side quests wrap onto extra lines
 	hideInCombat = false,
+	zoneReminders = true, -- list a zone's side quests in chat when you arrive
+	reminderSound = true, -- and play a warning sound
 	shown = true,
 	width = 320,
 	height = 400,
